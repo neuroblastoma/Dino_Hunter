@@ -5,7 +5,7 @@ screenWidth = 1500
 screenHeight = 750
 win = pygame.display.set_mode((screenWidth,screenHeight))
 
-pygame.display.set_caption("First Game")
+pygame.display.set_caption("Test Game Concepts")
 
 x = 50
 y = 50
@@ -48,9 +48,9 @@ while run:
             isJump = False
             jumpCount = 10
 
-    win.fill((0,0,0))
+    win.fill((255, 255, 255))
 
-    pygame.draw.rect(win,(255,0,0),(x,y,width,height))
+    pygame.draw.rect(win,(0,0,255),(x,y,width,height))
     pygame.display.update()
 
 pygame.quit()
