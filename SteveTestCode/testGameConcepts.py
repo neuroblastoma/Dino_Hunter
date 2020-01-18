@@ -96,8 +96,7 @@ while run:
     if x2 == 0:
         x2Mod = 1
 
-    #Air Dino 1 Movement
-    #TODO: FIX:Vary height pattern movement
+    #Air Dino 1 Movement #TODO: FIX:Vary height pattern movement
     airX += airVel * airXMod
     if airX == screenWidth - airWidth:
         airXMod = -1
@@ -124,8 +123,7 @@ while run:
         player1.y -= player1.vel
     if keys[pygame.K_DOWN] and player1.y < (screenHeight - player1.height):
         player1.y += player1.vel
-    if keys[pygame.K_SPACE]:
-        #TODO: shoot gun
+    if keys[pygame.K_SPACE]: #TODO: shoot gun
         '''
         xGun = x
         yGun = y + (height / 2)
