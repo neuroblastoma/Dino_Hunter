@@ -43,13 +43,27 @@ x2Mod = 1
 #Air Dino Values
 airWidth = 15
 airHeight = 15
-airX = 500
-airY = (screenHeight - height2) / 2
+airX = 50
+airY = screenHeight - 50
 airVel = 5
 airXMod = 1
-airYMod = +1
+airYMod = -1
 
+def redrawGameWindow():
+    win.fill((255, 255, 255))
 
+    #draw player helo
+    pygame.draw.rect(win,(0,0,255),(x,y,width,height))
+    #draw dino1
+    pygame.draw.rect(win,(255,0,0),(x1,y1,width1,height1))
+    #draw dino2
+    pygame.draw.rect(win,(255,165,0),(x2,y2,width2,height2))
+    #draw air dino
+    pygame.draw.rect(win, (255, 255, 0), (airX, airY, airWidth, airHeight))
+
+    pygame.display.update()
+
+#######################MAIN LOOP#################################
 run = True
 while run:
     pygame.time.delay(25)
@@ -98,21 +112,11 @@ while run:
         y += vel
     if keys[pygame.K_SPACE]:
         #TODO: shoot gun
-        pygame.draw.rect(win,(0,0,0),(x,y,gunWidth,gunHeight))
+        xGun = x
+        yGun = y + (height / 2)
+        pygame.draw.rect(win,(0,0,0),(xGun,yGun,screenWidth,2))
         pygame.display.update()
 
-
-    win.fill((255, 255, 255))
-
-    #draw player helo
-    pygame.draw.rect(win,(0,0,255),(x,y,width,height))
-    #draw dino1
-    pygame.draw.rect(win,(255,0,0),(x1,y1,width1,height1))
-    #draw dino2
-    pygame.draw.rect(win,(255,165,0),(x2,y2,width2,height2))
-    #draw air dino
-    pygame.draw.rect(win, (255, 255, 0), (airX, airY, airWidth, airHeight))
-
-    pygame.display.update()
+    redrawGameWindow()
 
 pygame.quit()
