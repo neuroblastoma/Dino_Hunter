@@ -43,6 +43,10 @@ class groundDino(object): #TODO: Just created groundDino class. Need to go throu
         self.vel = vel
         self.xMod = 1
 
+    def draw(self, win):
+        #win.fill((0, 0, 0))
+        pygame.draw.rect(win, (255, 0, 0), (self.x, self.y, self.width, self.height))
+
 #Ground Dino 1 Values
 
 
@@ -68,7 +72,8 @@ def redrawGameWindow():
     #draw player helo
     player1.draw(win)
     #draw dino1
-    pygame.draw.rect(win,(255,0,0),(x1,y1,width1,height1))
+    tRex.draw(win)
+    #pygame.draw.rect(win,(255,0,0),(x1,y1,width1,height1))
     #draw dino2
     pygame.draw.rect(win,(255,165,0),(x2,y2,width2,height2))
     #draw air dino
@@ -78,20 +83,22 @@ def redrawGameWindow():
 
 #######################  MAIN  #################################
 player1 = player(50, 50, 25, 25, 2)
+tRex = groundDino(5, (screenHeight - 30), 30, 30, 0.5)
+
 run = True
 while run:
     pygame.time.delay(25)
 
     #Ground Dino 1 Movement
-    x1 += vel1 * x1Mod
-    if x1 == screenWidth - width1:
-        x1Mod = -1
-    if x1 == 0:
-        x1Mod = 1
+    tRex.x += tRex.vel * tRex.xMod
+    if tRex.x == screenWidth - tRex.width:
+        tRex.xMod = -1
+    if tRex.x == 0:
+        tRex.xMod = 1
 
     #Ground Dino 2 Movement
     x2 += vel2 * x2Mod
-    if x2 == screenWidth - width1:
+    if x2 == screenWidth - width2:
         x2Mod = -1
     if x2 == 0:
         x2Mod = 1
