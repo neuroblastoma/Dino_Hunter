@@ -4,7 +4,7 @@ pygame.init()
 
 screenWidth = 1500
 screenHeight = 750
-win = pygame.display.set_mode((screenWidth,screenHeight))
+win = pygame.display.set_mode((screenWidth, screenHeight))
 
 pygame.display.set_caption("Test Game Concepts")
 
@@ -16,6 +16,7 @@ class player(object):
     height = 25
     vel = 2
     '''
+
     def __init__(self, x=50, y=50, width=25, height=25, vel=2):
         self.x = x
         self.y = y
@@ -27,7 +28,7 @@ class player(object):
         win.fill((0, 0, 0))
         pygame.draw.rect(win, (0, 0, 255), (self.x, self.y, self.width, self.height))
 
-class groundDino(object): #TODO: Just created groundDino class. Need to go through MAIN to update w/ OOP
+class groundDino(object):
     ''' Ground Dinosaur. Defaulting attributes:
     width1 = 30
     height1 = 30
@@ -35,7 +36,8 @@ class groundDino(object): #TODO: Just created groundDino class. Need to go throu
     y1 = screenHeight - height1
     vel1 = 0.5
     x1Mod = 1 '''
-    def __init__(self, x=5, y=screenHeight - 30, width=30, height=30, vel=0.5, rgb=1):
+
+    def __init__(self, x=5, y=screenHeight - 30, width=30, height=30, vel=0.5, rgb=(255,0,0)):
         self.x = x
         self.y = y
         self.width = width
@@ -46,31 +48,53 @@ class groundDino(object): #TODO: Just created groundDino class. Need to go throu
 
     def draw(self, win):
         #win.fill((0, 0, 0))
-        if self.rgb == 3:
-            color = (0, 0, 255)
-        elif self.rgb == 2:
-            color = (0, 255, 0)
-        else:
-            color = (255, 0, 0)
-        pygame.draw.rect(win, color, (self.x, self.y, self.width, self.height))
+        pygame.draw.rect(win, self.rgb, (self.x, self.y, self.width, self.height))
 
-#Ground Dino 2 Values (raptor)
-'''
-width2 = 15
-height2 = 15
-x2 = 500
-y2 = screenHeight - height2
-vel2 = 5
-x2Mod = 1
-'''
-#Air Dino Values
-airWidth = 15
-airHeight = 15
-airX = 50
-airY = screenHeight - 50
-airVel = 5
-airXMod = 1
-airYMod = -1
+    # Ground Dino 2 Values (raptor)
+    # width2 = 15
+    # height2 = 15
+    # x2 = 500
+    # y2 = screenHeight - height2
+    # vel2 = 5
+    # x2Mod = 1
+
+
+
+class airDino(object):
+    ''' Air Dinosaur. Default attributes:
+    airWidth = 15
+    airHeight = 15
+    airX = 50
+    airY = screenHeight - 50
+    airVel = 5
+    airXMod = 1
+    airYMod = -1 '''
+
+    def __init__(self, x=50, y=(screenHeight - 20), width=15, height=15, vel=5, rgb=(255,255,0)):
+        self.width = width
+        self.height = height
+        self.x = x
+        self.y = y
+        self.vel = vel
+        self.rgb = rgb
+        self.xMod = 1
+        self.yMod = -0.5
+
+    def draw(self, win):
+        pygame.draw.rect(win, self.rgb, (self.x, self.y, self.width, self.height))
+
+class projectile(object):
+    def __init__(self,x,y,radius,color,facing):
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.color = color
+        self.facing = facing
+        self.vel = 8 *self.facing
+    # TODO: finish projectile tutorial 04:07
+    # def draw(self, win):
+    #     pygame.draw.circle(win, self.color,(self.x,self.y),self.radius)
+
 
 def redrawGameWindow():
     win.fill((255, 255, 255))
@@ -81,22 +105,21 @@ def redrawGameWindow():
     for dino in dinoList:
         dino.draw(win)
 
-    #draw dino1
-    #tRex.draw(win)
-
-    #draw dino2
-    #raptor.draw(win)
-
     #draw air dino
-    pygame.draw.rect(win, (255, 255, 0), (airX, airY, airWidth, airHeight))
+    #pygame.draw.rect(win, (255, 255, 0), (airX, airY, airWidth, airHeight))
 
     pygame.display.update()
 
 #######################  MAIN  #################################
 player1 = player()
 tRex = groundDino()
-raptor = groundDino(500,screenHeight - 15, 15, 15, 5)
-dinoList = [tRex, raptor]
+raptor = groundDino(500,screenHeight - 15, 15, 15, 5, rgb=(255,165,0))
+ptero = airDino()
+
+dinoList = [tRex, raptor, ptero]
+
+spawnList = [1]
+spawnNum = 1
 
 run = True
 while run:
@@ -116,17 +139,17 @@ while run:
     if raptor.x == 0:
         raptor.xMod = 1
 
-    #Air Dino 1 Movement #TODO: FIX:Vary height pattern movement
-    airX += airVel * airXMod
-    if airX == screenWidth - airWidth:
-        airXMod = -1
-    if airX == 0:
-        airXMod = 1
-    if airY == 0:
-        airYMod = 1
-    if airY == screenHeight:
-        airYMod = -1
-    airY += (airVel * math.sin(airX)) + airYMod
+    #Air Dino 1 Movement #TODO: FIX:Vary height pattern movement and 'perimeter rebound'
+    ptero.x += ptero.vel * ptero.xMod
+    if ptero.x == screenWidth - ptero.width:
+        ptero.xMod = -1
+    if ptero.x == 0:
+        ptero.xMod = 1
+    if ptero.y == 0:
+        ptero.yMod = 1
+    if ptero.y == screenHeight:
+        ptero.yMod = -1
+    ptero.y += (ptero.vel * math.sin(ptero.x)) + ptero.yMod
 
 
     for event in pygame.event.get():
@@ -143,14 +166,24 @@ while run:
         player1.y -= player1.vel
     if keys[pygame.K_DOWN] and player1.y < (screenHeight - player1.height):
         player1.y += player1.vel
-    if keys[pygame.K_SPACE]: #TODO: shoot gun
-        '''
+    if keys[pygame.K_SPACE]: #TODO: experiment with spawning
+        spawn = str(spawnNum)
+        spawn = airDino()
+        spawnNum += 1
+        dinoList.append(spawn)
+        print(spawn)
+
+    # TODO: shoot gun
+    '''    
+    if keys[pygame.K_SPACE]: 
+        
         xGun = x
         yGun = y + (height / 2)
         pygame.draw.rect(win,(0,0,0),(xGun,yGun,screenWidth,2))
         pygame.display.update()
-        '''
+        
         pass
+    '''
 
     redrawGameWindow()
 
