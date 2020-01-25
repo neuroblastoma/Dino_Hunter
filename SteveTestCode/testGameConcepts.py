@@ -16,7 +16,7 @@ class player(object):
     height = 25
     vel = 2
     '''
-    def __init__(self, x, y, width, height, vel):
+    def __init__(self, x=50, y=50, width=25, height=25, vel=2):
         self.x = x
         self.y = y
         self.width = width
@@ -28,36 +28,41 @@ class player(object):
         pygame.draw.rect(win, (0, 0, 255), (self.x, self.y, self.width, self.height))
 
 class groundDino(object): #TODO: Just created groundDino class. Need to go through MAIN to update w/ OOP
-    '''Ground Dinosaur. Defaulting attributes:
+    ''' Ground Dinosaur. Defaulting attributes:
     width1 = 30
     height1 = 30
     x1 = 5
     y1 = screenHeight - height1
     vel1 = 0.5
     x1Mod = 1 '''
-    def __init__(self, x, y, width, height, vel):
+    def __init__(self, x=5, y=screenHeight - 30, width=30, height=30, vel=0.5, rgb=1):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
         self.vel = vel
+        self.rgb = rgb
         self.xMod = 1
 
     def draw(self, win):
         #win.fill((0, 0, 0))
-        pygame.draw.rect(win, (255, 0, 0), (self.x, self.y, self.width, self.height))
+        if self.rgb == 3:
+            color = (0, 0, 255)
+        elif self.rgb == 2:
+            color = (0, 255, 0)
+        else:
+            color = (255, 0, 0)
+        pygame.draw.rect(win, color, (self.x, self.y, self.width, self.height))
 
-#Ground Dino 1 Values
-
-
-#Ground Dino 2 Values
+#Ground Dino 2 Values (raptor)
+'''
 width2 = 15
 height2 = 15
 x2 = 500
 y2 = screenHeight - height2
 vel2 = 5
 x2Mod = 1
-
+'''
 #Air Dino Values
 airWidth = 15
 airHeight = 15
@@ -71,37 +76,45 @@ def redrawGameWindow():
     win.fill((255, 255, 255))
     #draw player helo
     player1.draw(win)
+
+    #draw dinoList
+    for dino in dinoList:
+        dino.draw(win)
+
     #draw dino1
-    tRex.draw(win)
-    #pygame.draw.rect(win,(255,0,0),(x1,y1,width1,height1))
+    #tRex.draw(win)
+
     #draw dino2
-    pygame.draw.rect(win,(255,165,0),(x2,y2,width2,height2))
+    #raptor.draw(win)
+
     #draw air dino
     pygame.draw.rect(win, (255, 255, 0), (airX, airY, airWidth, airHeight))
 
     pygame.display.update()
 
 #######################  MAIN  #################################
-player1 = player(50, 50, 25, 25, 2)
-tRex = groundDino(5, (screenHeight - 30), 30, 30, 0.5)
+player1 = player()
+tRex = groundDino()
+raptor = groundDino(500,screenHeight - 15, 15, 15, 5)
+dinoList = [tRex, raptor]
 
 run = True
 while run:
     pygame.time.delay(25)
 
-    #Ground Dino 1 Movement
+    #tRex Movement
     tRex.x += tRex.vel * tRex.xMod
     if tRex.x == screenWidth - tRex.width:
         tRex.xMod = -1
     if tRex.x == 0:
         tRex.xMod = 1
 
-    #Ground Dino 2 Movement
-    x2 += vel2 * x2Mod
-    if x2 == screenWidth - width2:
-        x2Mod = -1
-    if x2 == 0:
-        x2Mod = 1
+    #raptor Movement
+    raptor.x += raptor.vel * raptor.xMod
+    if raptor.x == screenWidth - raptor.width:
+        raptor.xMod = -1
+    if raptor.x == 0:
+        raptor.xMod = 1
 
     #Air Dino 1 Movement #TODO: FIX:Vary height pattern movement
     airX += airVel * airXMod
