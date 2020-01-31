@@ -51,3 +51,27 @@ class Entity(object):
     # Rules: ?
 
 # TODO: Projectile Class outside of Entity class?
+
+
+def redrawGameWindow():
+    """redrawGameWindow function will fill the window with the specific RGB value and then call on each
+    object's .draw() method in order to populate it to the window. """
+    win.fill((255, 255, 255))
+
+# MAIN CODE ################################################################################################
+# instantiate player
+# instantiate dinosaurs
+
+run = True
+while run:
+    pygame.time.delay(25)
+
+    # main game code
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+
+    redrawGameWindow()
+
+pygame.quit()
