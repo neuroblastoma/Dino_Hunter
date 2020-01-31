@@ -82,7 +82,7 @@ def redrawGameWindow():
     pygame.display.update()
 
 #######################  MAIN  #################################
-player1 = player(50, 50, 25, 25, 2)
+player1 = player(50, 50, 25, 25, 4)
 tRex = groundDino(5, (screenHeight - 30), 30, 30, 0.5)
 
 run = True
