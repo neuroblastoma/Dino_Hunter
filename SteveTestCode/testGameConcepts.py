@@ -8,6 +8,7 @@ win = pygame.display.set_mode((screenWidth, screenHeight))
 
 pygame.display.set_caption("Test Game Concepts")
 
+
 class player(object):
     ''' Player class. Defaulting attributes:
     x = 50
