@@ -63,7 +63,7 @@ class Player(Entity):
     # Rules: ?
 
 
-# TODO: Projectile Class outside of Entity class?
+# TODO: Projectile Class subclass of entity
 
 
 # class ControlManager(object):
