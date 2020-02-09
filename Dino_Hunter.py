@@ -53,17 +53,27 @@ class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
     # Rules: Clipping/Sprite collision: player will lose health if collides with any other object
     def __init__(self):
-        # TODO: This should be calling Entity?
-        super().__init__(health=100, x=100, y=100, width=5, height=5, vel=8)
+        # TODO: Player should enter screen from top, right
+        super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
 
         #TODO: Sounds, lift, gravity, etc.
         self.lives = 3
+
+        # Speed related ##################################################################
         #TODO: This should be both vertical and horizontal speed
-        self.lift_speed = 8 # 50 pixels/sec
-        self.fall_speed = 5
-        self.facing = True
+        #TODO: This should be it's own data structure that tracks the overall state (dict?)
+        self.max_speed = 7
+        self.max_lift = 3 # 5 pixels/sec
+        self.lift_speed = 0
+
+        # Determines facing direction
+        self.left_facing = True
+        self.old_horizontalDirection = -1
 
         # Animation #####################################################################
+        #TODO: May want to move this to a method? This will not be the only time we need to load images in this manner
+        # Entity or Utilities.SpriteSheet?
+
         # Load player sprite sheet
         self.sheet = Utilities.SpriteSheet(filename='MH-6J Masknell-flight.png', rows=1, columns=6)
 
@@ -89,27 +99,63 @@ class Player(Entity):
 
     def draw(self, surface):
         """Blit the player to the window"""
-        if self.facing:
+
+        # TODO: Add animation that triggers when facing changes
+
+        if self.left_facing:
             surface.blit(self.frame, self.rect)
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), self.rect)
     def move(self, vdir, hdir):
-        """Moves player based on keyboard input"""
-
-
-        if (hdir != 0 or vdir != 0):
-            #TODO: hard cap on speed if we do variable speed?
-            self.facing = True if hdir == -1 else False
-            self.x += (hdir * self.vel) #+ prevSpeed
-            self.y += (vdir * self.vel) #
-            #self.rect.move_ip(self.x, self.y)
-            self.rect = (self.x, self.y, 70, 90)
-
+        """Moves player based on keyboard input and tracks facing direct. Movement is not instantaneous.
+            The following cases apply to horizontal player movement
+                1. If player is stationary, horizontal speed resets after slowing down
+                2. If player changes direction, horizontal speed is negated
+                3. If player continues in same direction, horizontal speed is increased until max
+        """
+        print(self.vel)
         #TODO: Need to bound this to the screen limits
 
+        # Determine direction to face
+        old_facing = self.left_facing
+        if hdir != 0:
+            self.left_facing = True if hdir == -1 else False
+            self.old_horizontalDirection = hdir
 
-    def check_collision(self):
-        return NotImplementedError
+            # Case 3: Increase speed until max
+            if self.vel < self.max_speed:
+                self.vel += 0.25
+            else:
+                self.vel = self.max_speed
+
+        # Case 1: reset horizontal speed
+        else:
+            if self.vel > 0:
+                self.vel -= 0.25
+                hdir = self.old_horizontalDirection
+            else:
+                self.vel = 0
+
+        # Case 2: Simulate "drag" of direction change
+        if old_facing != self.left_facing:
+            self.vel = self.vel * -0.75
+
+
+        # Incremental vertical speed
+        if vdir < 0 or vdir > 0:
+            if self.lift_speed < self.max_lift:
+                self.lift_speed += 0.25
+            else:
+                self.lift_speed = self.max_lift
+
+        # Adjust (x,y)
+        self.x += (hdir * self.vel)
+        self.y += (vdir * self.lift_speed)
+
+        # Update self.rectangle with new coords
+        self.rect = (self.x, self.y, 70, 90)
+
+
 
 # class AirDino(Entity):
     # TODO: Air/Ground Dinosaur Class
