@@ -106,6 +106,9 @@ def redrawGameWindow():
     for dino in dinoList:
         dino.draw(win)
 
+    #bullet list
+    for bullet in bullets:
+        bullet.draw(win)
     #draw air dino
     #pygame.draw.rect(win, (255, 255, 0), (airX, airY, airWidth, airHeight))
 
@@ -156,7 +159,13 @@ while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-
+            
+    for bullet in bullets:
+        if bullet.x < 500 and bullet.x > 0:
+            bullet.x += bullet.vel
+        else:
+            bullets.pop(bullets.index(bullet))
+            
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_LEFT] and player1.x > player1.vel:
