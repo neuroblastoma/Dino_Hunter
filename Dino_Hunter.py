@@ -162,6 +162,10 @@ class Player(Entity):
     # Attributes: ?
     # Behaviors: ?
     # Rules: ?
+    # def __init__(self):
+    #     # TODO: Player should enter screen from top, right
+    #     super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
+    # working on ground dino testing update
 
 
 # TODO: Projectile Class subclass of entity (Matt)
