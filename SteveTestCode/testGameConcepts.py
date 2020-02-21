@@ -91,10 +91,11 @@ class projectile(object):
         self.radius = radius
         self.color = color
         self.facing = facing
-        self.vel = 8 *self.facing
+        self.vel = 8 #*self.facing
     # TODO: finish projectile tutorial 04:07
-    # def draw(self, win):
-    #     pygame.draw.circle(win, self.color,(self.x,self.y),self.radius)
+    def draw(self, win):
+        pygame.draw.circle(win, self.color, (self.x,self.y), self.radius)
+        #we could use a different shape and color for weapon upgrades
 
 
 def redrawGameWindow():
@@ -106,6 +107,9 @@ def redrawGameWindow():
     for dino in dinoList:
         dino.draw(win)
 
+    #bullet list
+    for bullet in bullets:
+        bullet.draw(win)
     #draw air dino
     #pygame.draw.rect(win, (255, 255, 0), (airX, airY, airWidth, airHeight))
 
@@ -121,7 +125,7 @@ dinoList = [tRex, raptor, ptero]
 
 spawnList = [1]
 spawnNum = 1
-
+bullets = []
 run = True
 while run:
     pygame.time.delay(25)
@@ -156,7 +160,13 @@ while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-
+    #projectile movement
+    for bullet in bullets:
+        if bullet.x < 500 and bullet.x > 0:
+            bullet.x += bullet.vel
+        else:
+            bullets.pop(bullets.index(bullet))
+            
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_LEFT] and player1.x > player1.vel:
@@ -173,18 +183,21 @@ while run:
         spawnNum += 1
         dinoList.append(spawn)
         print(spawn)
+        
 
     # TODO: shoot gun
-    '''    
+        
     if keys[pygame.K_SPACE]: 
         
-        xGun = x
-        yGun = y + (height / 2)
-        pygame.draw.rect(win,(0,0,0),(xGun,yGun,screenWidth,2))
-        pygame.display.update()
+        #xGun = x
+        #yGun = y + (height / 2)
+        #pygame.draw.rect(win,(0,0,0),(xGun,yGun,screenWidth,2))
+        #pygame.display.update()
         
+        if len(bullets) < 2:                                                                                     #radius, color(black)               
+            bullets.append(projectile(round(player1.x + player1.width //2), round(player1.y + player1.height //2), 6, (0,0,0)''', facing'''))
         pass
-    '''
+    
 
     redrawGameWindow()
 
