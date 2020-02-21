@@ -52,6 +52,7 @@ class Player(Entity):
     # TODO: Player (sub)Class
     # Attributes: Lives, Weapons/Power-ups
     # Rules: Clipping/Sprite collision: player will lose health if collides with any other object
+    # dsfsdfdsfdsfsd
     def __init__(self):
         # TODO: Player should enter screen from top, right
         super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
