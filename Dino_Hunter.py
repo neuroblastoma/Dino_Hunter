@@ -1,4 +1,4 @@
-#Dino_Hunter.py
+# Dino_Hunter.py
 #
 # CS3021 Big Project
 #
@@ -164,7 +164,7 @@ class Player(Entity):
     # Rules: ?
 
 
-# TODO: Projectile Class subclass of entity
+# TODO: Projectile Class subclass of entity (Matt)
 
 
 # class ControlManager(object):

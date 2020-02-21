@@ -91,11 +91,11 @@ class projectile(object):
         self.radius = radius
         self.color = color
         self.facing = facing
-        self.vel = 8 *self.facing
+        self.vel = 8 #*self.facing
     # TODO: finish projectile tutorial 04:07
-     def draw(self, win):
-            pygame.draw.circle(win, self.color, (self.x,self.y), self.radius)
-            #we could use a different shape and color for weapon upgrades
+    def draw(self, win):
+        pygame.draw.circle(win, self.color, (self.x,self.y), self.radius)
+        #we could use a different shape and color for weapon upgrades
 
 
 def redrawGameWindow():
@@ -195,7 +195,7 @@ while run:
         #pygame.display.update()
         
         if len(bullets) < 2:                                                                                     #radius, color(black)               
-            bullets.append(projectile(round(player1.x + player1.width //2), round(player1.y + player1.height //2), 6, (0,0,0), facing))
+            bullets.append(projectile(round(player1.x + player1.width //2), round(player1.y + player1.height //2), 6, (0,0,0)''', facing'''))
         pass
     
 
