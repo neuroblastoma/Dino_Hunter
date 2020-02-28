@@ -14,6 +14,13 @@ import pygame
 from itertools import cycle
 from util import Utilities
 
+import random
+
+screenWidth = 1500
+screenHeight = 750
+random.seed()
+
+
 # CLASSES ##################
 class Entity(pygame.sprite.Sprite):
     """This is the top-level class for any character entity that will exist on the screen in-game.
@@ -44,8 +51,7 @@ class Entity(pygame.sprite.Sprite):
         pass
 
     # def bound(self):
-        # TODO: Do we need a bound to window method in the Entity class?
-
+    # TODO: Do we need a bound to window method in the Entity class?
 
 
 class Player(Entity):
@@ -56,14 +62,14 @@ class Player(Entity):
         # TODO: Player should enter screen from top, right
         super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
 
-        #TODO: Sounds, lift, gravity, etc.
+        # TODO: Sounds, lift, gravity, etc.
         self.lives = 3
 
         # Speed related ##################################################################
-        #TODO: This should be both vertical and horizontal speed
-        #TODO: This should be it's own data structure that tracks the overall state (dict?)
+        # TODO: This should be both vertical and horizontal speed
+        # TODO: This should be it's own data structure that tracks the overall state (dict?)
         self.max_speed = 7
-        self.max_lift = 3 # 5 pixels/sec
+        self.max_lift = 3  # 5 pixels/sec
         self.lift_speed = 0
 
         # Determines facing direction
@@ -71,13 +77,13 @@ class Player(Entity):
         self.old_horizontalDirection = -1
 
         # Animation #####################################################################
-        #TODO: May want to move this to a method? This will not be the only time we need to load images in this manner
+        # TODO: May want to move this to a method? This will not be the only time we need to load images in this manner
         # Entity or Utilities.SpriteSheet?
 
         # Load player sprite sheet
         self.sheet = Utilities.SpriteSheet(filename='MH-6J Masknell-flight.png', rows=1, columns=6)
 
-        #TODO: Need to do the proper math for frame_duration
+        # TODO: Need to do the proper math for frame_duration
         self.timer = 0
         self.frame_duration = 33
         # Creates iterable list of images/frames
@@ -106,6 +112,7 @@ class Player(Entity):
             surface.blit(self.frame, self.rect)
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), self.rect)
+
     def move(self, vdir, hdir):
         """Moves player based on keyboard input and tracks facing direct. Movement is not instantaneous.
             The following cases apply to horizontal player movement
@@ -113,8 +120,8 @@ class Player(Entity):
                 2. If player changes direction, horizontal speed is negated
                 3. If player continues in same direction, horizontal speed is increased until max
         """
-        print(self.vel)
-        #TODO: Need to bound this to the screen limits
+        # print(self.vel)
+        # TODO: Need to bound this to the screen limits
 
         # Determine direction to face
         old_facing = self.left_facing
@@ -140,7 +147,6 @@ class Player(Entity):
         if old_facing != self.left_facing:
             self.vel = self.vel * -0.75
 
-
         # Incremental vertical speed
         if vdir < 0 or vdir > 0:
             if self.lift_speed < self.max_lift:
@@ -156,25 +162,66 @@ class Player(Entity):
         self.rect = (self.x, self.y, 70, 90)
 
 
-
-# class AirDino(Entity):
-    # TODO: Air/Ground Dinosaur Class
+class tRex(Entity):
+    # TODO: Check tRex Dinosaur Class
     # Attributes: ?
     # Behaviors: ?
     # Rules: ?
-    # def __init__(self):
-    #     # TODO: Player should enter screen from top, right
-    #     super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
-    # working on ground dino testing update
+    def __init__(self):
+        super().__init__(health=50, x=random.randrange(0,screenWidth - 121), y=screenHeight - 30, width=30, height=30, vel=random.uniform(0.5, 1.0))
+        self.rgb = (255, 0, 0)
+        self.end = screenWidth - (self.width * random.randrange(2,4))
+        self.path = [0 + (self.width * random.randrange(2,4)), self.end]
+
+    def draw(self, win):
+        self.move()
+        pygame.draw.rect(win, self.rgb, (self.x, self.y, self.width, self.height))
+
+    def move(self):
+        if self.vel > 0:
+            if self.x + self.vel < self.path[1]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+        else:
+            if self.x - self.vel > self.path[0]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+
+
+class raptor(Entity):
+    def __init__(self):
+        super().__init__(health=25, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15, vel=random.uniform(4,6))
+        self.rgb = (255, 255, 255)
+        self.end = screenWidth - (self.width * random.randrange(2,4))
+        self.path = [0 + (self.width * random.randrange(2,4)), self.end]
+
+    def draw(self, win):
+        self.move()
+        pygame.draw.rect(win, self.rgb, (self.x, self.y, self.width, self.height))
+
+    def move(self):
+        if self.vel > 0:
+            if self.x + self.vel < self.path[1]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+        else:
+            if self.x - self.vel > self.path[0]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+
 
 
 # TODO: Projectile Class subclass of entity (Matt)
 
 
 # class ControlManager(object):
-    # """Class for tracking game states & managing event loop
-    #     https://github.com/Mekire/pygame-samples/blob/master/platforming/moving_platforms.py
-    # """
+# """Class for tracking game states & managing event loop
+#     https://github.com/Mekire/pygame-samples/blob/master/platforming/moving_platforms.py
+# """
 #     def __init__(self):
 #         """Initialize the diplay and prepare game objects"""
 #         self.screen = pygame.display.get_surface()
@@ -196,32 +243,31 @@ class Player(Entity):
 def redrawGameWindow(win, world, dt):
     """redrawGameWindow function will fill the window with the specific RGB value and then call on each
     object's .draw() method in order to populate it to the window. """
-    black = (0,0,0)
-    white = (255,255,255)
+    black = (0, 0, 0)
+    white = (255, 255, 255)
 
     win.fill(black)
 
     for entity in world:
-
-        #TODO: Should update and draw be the same thing?
+        # TODO: Should update and draw be the same thing?
         #   One updates the position/animation
         #   The other draws everything to the screen
         entity.update(dt)
         entity.draw(win)
 
-    #Update the main display
+    # Update the main display
     pygame.display.update()
 
 
 def main():
     # MAIN CODE ################################################################################################
-    #TODO: Think about "world" state == a way to track all entities in game.
+    # TODO: Think about "world" state == a way to track all entities in game.
     # Pygame uses groups to categorize different things, may be worth looking into
     # May want to consider moving this to its own DinoGame class (2/6: Lytle)
     pygame.init()
 
     # SETTINGS ##################################
-    #TODO: move all of this to ControlManager or Settings?
+    # TODO: move all of this to ControlManager or Settings?
     fps = 60
     screenWidth = 1500
     screenHeight = 750
@@ -241,10 +287,15 @@ def main():
     # instantiate player
     player = Player()
     # instantiate dinosaurs
+    rex1 = tRex()
+    rex2 = tRex()
+    raptor1 = raptor()  # TODO: Steven Question: Can I change default values?
+    raptor2 = raptor()
+    raptor3 = raptor()
 
     # Create world list (i.e., entity tracker)
     # TODO: Is this our missing data structure in the making?
-    world = [player]
+    world = [player, rex1, rex2, raptor1, raptor2, raptor3]
 
     # GAME LOOP ##################################
     """This loop represents all the actions that need to be taken during one cycle:
@@ -255,7 +306,7 @@ def main():
     """
     run = True
     while run:
-        #pygame.time.delay(33)
+        # pygame.time.delay(33)
         dt = clock.tick(fps)
 
         # check events
@@ -264,7 +315,7 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
 
-        #Retrieve all keys being pressed (key bitmap)
+        # Retrieve all keys being pressed (key bitmap)
         keystate = pygame.key.get_pressed()
 
         # Parse keystate
@@ -276,9 +327,16 @@ def main():
         # Move
         player.move(verticalDirection, horizontalDirection)
 
+        # tRex Movement
+        # gDino1.x += gDino1.vel * gDino1.xMod
+        # if gDino1.x == screenWidth - gDino1.width:
+        #     gDino1.xMod = -1
+        # if gDino1.x == 0:
+        #     gDino1.xMod = 1
+
         # Insert checks for collisions here
 
-        #TODO: Should really consider scenes... Ugh. Why so complicated?
+        # TODO: Should really consider scenes... Ugh. Why so complicated?
 
         # Insert music here
 
@@ -287,7 +345,6 @@ def main():
         # Check to see if player is out of lives?
         if player.lives <= 0:
             run = False
-
 
     pygame.quit()
 

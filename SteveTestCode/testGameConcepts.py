@@ -130,12 +130,7 @@ run = True
 while run:
     pygame.time.delay(25)
 
-    #tRex Movement
-    tRex.x += tRex.vel * tRex.xMod
-    if tRex.x == screenWidth - tRex.width:
-        tRex.xMod = -1
-    if tRex.x == 0:
-        tRex.xMod = 1
+
 
     #raptor Movement
     raptor.x += raptor.vel * raptor.xMod
@@ -195,7 +190,7 @@ while run:
         #pygame.display.update()
         
         if len(bullets) < 2:                                                                                     #radius, color(black)               
-            bullets.append(projectile(round(player1.x + player1.width //2), round(player1.y + player1.height //2), 6, (0,0,0)''', facing'''))
+            bullets.append(projectile(round(player1.x + player1.width //2), round(player1.y + player1.height //2), 6, (0,0,0), facing))
         pass
     
 
