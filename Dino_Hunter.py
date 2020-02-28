@@ -25,8 +25,7 @@ class Entity(pygame.sprite.Sprite):
     Rules: ? """
 
     def __init__(self, health, x, y, width, height, vel):
-        # TODO: Why is this the way? (https://stackoverflow.com/questions/53804098/add-argument-after-must-be-an-iterable-not-int-pygame)
-        super(Entity, self).__init__()
+        super().__init__()
 
         self.health = health
         self.x = x
@@ -37,17 +36,14 @@ class Entity(pygame.sprite.Sprite):
         self.images = None
         self.rect = None
 
-    def draw(self, surface, target):
-        # TODO: Do we need a draw to window method in the Entity class?
-        ## This is all inherited from the Sprite class..., so ?
-        pass
+    def draw(self, **kwargs):
+        return NotImplemented
 
-    def update(self, dt):
-        pass
+    def update(self, **kwargs):
+        return NotImplemented
 
-    # def bound(self):
-    # TODO: Do we need a bound to window method in the Entity class?
-
+    def move(self, **kwargs):
+        return NotImplemented
 
 class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
@@ -59,12 +55,11 @@ class Player(Entity):
         # TODO: Player should enter screen from top, right
         super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
 
-        # TODO: Sounds, lift, gravity, etc.
+        # TODO: Sounds
         self.lives = 3
 
         # Speed related ##################################################################
         # TODO: This should be both vertical and horizontal speed
-        # TODO: This should be it's own data structure that tracks the overall state (dict?)
         self.max_speed = 7
         self.max_lift = 3  # 5 pixels/sec
         self.lift_speed = 0
@@ -74,9 +69,6 @@ class Player(Entity):
         self.old_horizontalDirection = -1
 
         # Animation #####################################################################
-        # TODO: May want to move this to a method? This will not be the only time we need to load images in this manner
-        # Entity or Utilities.SpriteSheet?
-
         # Load player sprite sheet
         self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1, columns=6)
 
@@ -92,7 +84,7 @@ class Player(Entity):
 
         self.frameCycle = cycle(self.frames)
         self.frame = next(self.frameCycle)
-        self.rect = pygame.Rect(self.frame.get_rect())
+        self.rect = self.frame.get_rect()
 
     def update(self, dt):
         self.timer += dt
@@ -156,21 +148,46 @@ class Player(Entity):
         self.y += (vdir * self.lift_speed)
 
         # Update self.rectangle with new coords
-        self.rect = (self.x, self.y, 70, 90)
-
-
-# class AirDino(Entity):
-# TODO: Air/Ground Dinosaur Class
-# Attributes: ?
-# Behaviors: ?
-# Rules: ?
+        self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
 
 # TODO: Projectile Class subclass of entity (Matt)
+class Projectile(Entity):
+
+    def __init__(self, x, y, radius, color, facing):
+        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=5)
+        self.x = int(x)
+        self.y = int(y)
+        self.radius = radius
+        self.color = color
+        self.rect = pygame.Rect(self.x - radius, self.y - radius, radius*2, radius*2)
+        self.facing = facing
+
+    def draw(self, surface, target):
+        pygame.draw.circle(surface, self.color, (self.x, self.y), self.radius)
+
+    def update(self, dt):
+        # TODO NEED TO CHANGE LIMITS AND HANDLE FACING...
+        if self.facing:
+            self.x -= self.vel
+        else:
+            self.x += self.vel
+
+    def move(self):
+        return NotImplemented
 
 class BackgroundObjects(Entity):
     def __init__(self, health, x, y, width, height, vel):
         super().__init__(health, x, y, width, height, vel)
+
+    def draw(self):
+        return NotImplemented
+
+    def update(self):
+        return NotImplemented
+
+    def move(self):
+        return NotImplemented
 
 class Camera(object):
     '''https://stackoverflow.com/questions/14354171/add-scrolling-to-a-platformer-in-pygame'''
@@ -181,24 +198,13 @@ class Camera(object):
         self.cameraFunc = cameraFunc
 
     def apply(self, target):
-        t = pygame.Rect(target.rect)
-        return t.move(self.state.topleft)
+        if target.rect != None:
+            t = pygame.Rect(target.rect)
+            return t.move(self.state.topleft)
 
     def update(self, target):
-        t = pygame.Rect(target.rect)
-        self.state = self.cameraFunc(self.state, t, self.width, self.height)
-
-    # def update(self, *args):
-    #     super().update(*args)
-    #     if self.target:
-    #         x = -self.target.rect.center[0] + self.width / 2
-    #         y = -self.target.rect.center[1] + self.height / 2
-    #         self.cam += (pygame.Vector2((x, y)) - self.cam) * 0.05
-    #         self.cam.x = max(-(self.state.width - self.width), min(0, self.cam.x))
-    #         self.cam.y = max(-(self.state.height - self.height), min(0, self.cam.y))
-
-    # def draw(self, target):
-    #     self.state = self.update(self.state, target.rect)
+        if isinstance(target, Player):
+            self.state = self.cameraFunc(self.state, target.rect, self.width, self.height)
 
 
 class ControlManager(object):
@@ -238,6 +244,7 @@ class ControlManager(object):
         self.world = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.players = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
 
         # Sprite initialization
         self.player = Player()
@@ -278,11 +285,10 @@ class ControlManager(object):
 
     def create_enemies(self):
         # TODO: different amount/types depending on level?
-
         # TODO: THIS IS A TEST
-        evilPlayer = Player()
-
-        self.enemies.add(evilPlayer)
+        # evilPlayer = Player()
+        # self.enemies.add(evilPlayer)
+        pass
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -318,17 +324,33 @@ class ControlManager(object):
             # Movement
             self.player.move(verticalDirection, horizontalDirection)
 
-            print(type(self.player))
+            # Projectile spawn
+            if firing:
+                # Number of supported bullets on screen
+                if len(self.bullets) < 2:
+                    # Adds bullet to bullets sprite group
+                    self.bullets.add(Projectile((self.player.x + self.player.width // 2), round(self.player.y + self.player.height // 2), 6, (0,0,0), self.player.left_facing))
+
+                self.world.add(self.bullets)
 
             # Collision detection:
             if self.enemies:
-                if pygame.sprite.spritecollide(self.players, self.enemies, dokill=False):
+                if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
                     self.player.lives -= 1
                     # TODO: Explosion or flashing or something?
 
                     if self.player.lives <= 0:
                         self.player.kill()
                         # TODO: Game over screen...
+
+            elif self.bullets:
+                for bullet in self.bullets:
+                    if bullet.x > self.screenWidth or bullet.x < 0:
+                        self.bullets.remove(bullet)
+
+                    if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
+                        #TODO: Remove enemies and bullets from respective trackers and self.world
+                        continue
             else:
                 # TODO: Display success and move to next level
                 pass
