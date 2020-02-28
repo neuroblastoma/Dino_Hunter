@@ -166,6 +166,27 @@ class Player(Entity):
 
 
 # TODO: Projectile Class subclass of entity (Matt)
+# class projectile(object):
+    def __init__(self, x, y, radius, color, facing):
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.color = color
+        #self.facing = facing    need to adjust for our code
+        #self.vel = 8 * facing
+        
+       def redrawGameWindow():
+        
+        #fills in window with our background
+        win.blit(bg, (0,0))
+        
+        # this was the name I chose, but it need to be updated
+        pilot.draw(win)
+        
+        for bullet in bullets:
+            bullet.draw(win)
+            
+        pygame.display.update()
 
 
 # class ControlManager(object):
@@ -250,6 +271,9 @@ def main():
             3. Redraw the graphics for the world
             4. Call pygame.display.update to update graphics on screen.
     """
+    #might needto rename pilot
+    pilot = player(300, 410, 64, 64)
+    bullets = []
     run = True
     while run:
         #pygame.time.delay(33)
@@ -260,7 +284,14 @@ def main():
             # If user clicks red X, toggle run
             if event.type == pygame.QUIT:
                 run = False
-
+        
+        #firing the bullet
+        for bullet in bullets:
+            if bullet.x < 500 and bullet.x > 0:
+                bullet.x += bullet.vel
+            else:
+                bullets.pop(bullets.index(bullet))
+        
         #Retrieve all keys being pressed (key bitmap)
         keystate = pygame.key.get_pressed()
 
@@ -269,7 +300,13 @@ def main():
         verticalDirection = keystate[pygame.K_s] - keystate[pygame.K_w]
         horizontalDirection = keystate[pygame.K_d] - keystate[pygame.K_a]
         firing = keystate[pygame.K_SPACE]
-
+            
+            # might need to change the location of this if statement
+            # the facing variable was for the direction the character is pointing
+            if len(bullets) < 2:
+                bullets.append(projectile(round(pilot.x + pilot.width // 2), round(pilot.y + pilot.height // 2), 6, (0,0,0), facing))
+                # bullets.append(projectile(round(pilot.x + pilot.width // 2), round(pilot.y + pilot.height // 2), 6, (255,0,0), facing))
+                #  bullets.append(projectile(round(pilot.x + pilot.width // 2), round(pilot.y + pilot.height // 2), 6, (0,0,255), facing))
         # Move
         player.move(verticalDirection, horizontalDirection)
 
