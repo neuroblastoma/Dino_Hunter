@@ -360,6 +360,7 @@ class ControlManager(object):
 
             # Insert music here
 
+
             self.redrawGameWindow()
 
             # Check to see if player is out of lives?
@@ -368,6 +369,7 @@ class ControlManager(object):
 
     def parse_keyState(self):
         '''Parses pressed keys'''
+
 
         # Movement
         # If > 0: up/left else down/right
