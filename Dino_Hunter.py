@@ -166,7 +166,8 @@ class Player(Entity):
 
 
 # TODO: Projectile Class subclass of entity (Matt)
-# class projectile(object):
+class projectile(object):
+    
     def __init__(self, x, y, radius, color, facing):
         self.x = x
         self.y = y
@@ -175,7 +176,7 @@ class Player(Entity):
         #self.facing = facing    need to adjust for our code
         #self.vel = 8 * facing
         
-       def redrawGameWindow():
+    def redrawGameWindow():
         
         #fills in window with our background
         win.blit(bg, (0,0))
@@ -303,8 +304,8 @@ def main():
             
             # might need to change the location of this if statement
             # the facing variable was for the direction the character is pointing
-            if len(bullets) < 2:
-                bullets.append(projectile(round(pilot.x + pilot.width // 2), round(pilot.y + pilot.height // 2), 6, (0,0,0), facing))
+        if len(bullets) < 2:
+            bullets.append(projectile(round(pilot.x + pilot.width // 2), round(pilot.y + pilot.height // 2), 6, (0,0,0), facing))
                 # bullets.append(projectile(round(pilot.x + pilot.width // 2), round(pilot.y + pilot.height // 2), 6, (255,0,0), facing))
                 #  bullets.append(projectile(round(pilot.x + pilot.width // 2), round(pilot.y + pilot.height // 2), 6, (0,0,255), facing))
         # Move
