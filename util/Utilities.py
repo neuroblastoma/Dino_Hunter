@@ -48,3 +48,21 @@ class SpriteSheet(object):
 
         return retSurfaces
 
+def simple_camera(camera, rect, screenWidth, screenHeight):
+    left, top, _, _ = rect
+    _, _, width, height = camera
+
+    return pygame.Rect(-left + (screenWidth/2), -top + (screenHeight/2), width, height)
+
+
+def complex_camera(camera, rect, screenWidth, screenHeight):
+    # we want to center target_rect
+    x = -rect.center[0] + screenWidth/2
+    y = -rect.center[1] + screenHeight/2
+    # move the camera. Let's use some vectors so we can easily substract/multiply
+    camera.topleft += (pygame.Vector2((x, y)) - pygame.Vector2(camera.topleft)) * 0.06 # add some smoothness coolnes
+    # set max/min x/y so we don't see stuff outside the world
+    camera.x = max(-(camera.width-screenWidth), min(0, camera.x))
+    camera.y = max(-(camera.height-screenHeight), min(0, camera.y))
+
+    return camera
