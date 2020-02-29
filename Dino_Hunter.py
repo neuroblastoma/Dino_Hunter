@@ -59,7 +59,7 @@ class ControlManager(object):
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
+        self.camera = Camera(Utilities.simple_camera, self.screenWidth, self.screenHeight)
         self.dt = None
         self.keyState = None
         self.run = True
@@ -125,9 +125,9 @@ class ControlManager(object):
             # Projectile spawn
             if firing:
                 # Number of supported bullets on screen
-                if len(self.bullets) < 5:
+                if len(self.bullets) < 15:
                     # Adds bullet to bullets sprite group
-                    self.bullets.add(Projectile(round(self.player.x + self.player.width // 2), round(self.player.y + self.player.height // 2), 6, color=(0,0,0), facing=self.player.left_facing, velocity=int(50)))
+                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2), round(self.player.y + 55 + self.player.height // 4), 2, color=(0,0,0), facing=self.player.left_facing, velocity=int(50)))
 
                 self.world.add(self.bullets)
 
@@ -143,8 +143,10 @@ class ControlManager(object):
 
             elif self.bullets:
                 for bullet in self.bullets:
+                    print(bullet.x)
                     if bullet.x > self.screenWidth or bullet.x < 0:
                         self.bullets.remove(bullet)
+                        self.world.remove(bullet)
 
                     if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
                         #TODO: Remove enemies and bullets from respective trackers and self.world
@@ -203,11 +205,14 @@ class ControlManager(object):
         self.screen.blit(self.background, (0,0))
 
         # Update camera
+        self.player.update(self.dt)
+        self.player.draw(self.screen, self.player)
         self.camera.update(self.player)
 
         for entity in self.world:
-            entity.update(self.dt)
-            entity.draw(self.screen, self.camera.apply(entity))
+            if not isinstance(entity, Player):
+                entity.update(self.dt)
+                entity.draw(self.screen, self.camera.apply(entity))
 
         # Update the main display
         pygame.display.update()
@@ -360,7 +365,6 @@ class Projectile(Entity):
         pygame.draw.circle(surface, self.color, (self.x, self.y), self.radius)
 
     def update(self, dt):
-        # TODO NEED TO CHANGE LIMITS AND HANDLE FACING...
         if self.facing:
             self.x -= self.vel
         else:
