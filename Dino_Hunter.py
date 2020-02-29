@@ -17,6 +17,201 @@ from util import Utilities
 
 
 # CLASSES ##################
+class Camera(object):
+    '''https://stackoverflow.com/questions/14354171/add-scrolling-to-a-platformer-in-pygame'''
+    def __init__(self, cameraFunc, width, height):
+        self.width = width
+        self.height = height
+        self.offsetState = pygame.Rect(0, 0, self.width, self.height)
+        self.cameraFunc = cameraFunc
+
+    def apply(self, target):
+        return target.rect.move(self.offsetState.topleft)
+
+    def update(self, target):
+        self.offsetState = self.cameraFunc(self.offsetState, target.rect, self.width, self.height)
+
+class ControlManager(object):
+    """Class for tracking game states & managing event loop
+        https://github.com/Mekire/pygame-samples/blob/master/platforming/moving_platforms.py
+    """
+
+    def __init__(self, caption, screenWidth=1500, screenHeight=750):
+        """Initialize the display and prepare game objects"""
+        # Screen settings
+        self.screenWidth = screenWidth
+        self.screenHeight = screenHeight
+        self.fps = 60
+
+        # Screen attributes
+        pygame.display.set_caption(caption)
+        self.screen = pygame.display.set_mode((self.screenWidth, self.screenHeight))
+        self.screen_rect = self.screen.get_rect()
+        self.viewport = self.screen.get_rect()
+
+        # TODO: what does this do? Is it only used for text???
+        self.level = pygame.Surface((1000, 1000)).convert()
+        self.level_rect = self.level.get_rect()
+
+        # TODO: How do we handle level transitions?
+        self.background = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
+        self.background = pygame.transform.scale(self.background, (self.screenWidth, self.screenHeight))
+
+        # Core settings
+        self.clock = pygame.time.Clock()
+        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
+        self.dt = None
+        self.keyState = None
+        self.run = True
+
+        # Sprite trackers
+        self.world = pygame.sprite.Group()
+        self.enemies = pygame.sprite.Group()
+        self.players = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
+
+        # Sprite initialization
+        self.player = Player()
+        self.create_enemies()
+
+        # Add sprites to "global" tracker
+        self.world.add(self.player)
+        self.players.add(self.player)
+
+        for e in self.enemies:
+            self.world.add(e)
+
+    def create_enemies(self):
+        # TODO: different amount/types depending on level?
+        # TODO: THIS IS A TEST
+        # evilPlayer = Player()
+        # self.enemies.add(evilPlayer)
+        pass
+
+    def make_text(self, message):
+        """Renders text object to the screen"""
+        font = pygame.font.Font(None, 100)
+        text = font.render(message, True, (100, 100, 175))
+        rect = text.get_rect(centerx=self.level_rect.centerx, y=100)
+
+        return text, rect
+
+    def main_loop(self):
+        """This loop represents all the actions that need to be taken during one cycle:
+                1. Update world based on what user did
+                2. Clear screen w/ win.fill(black)
+                3. Redraw the graphics for the world
+                4. Call pygame.display.update to update graphics on screen.
+        """
+        while self.run:
+            # check events
+            for event in pygame.event.get():
+                # If user clicks red X, toggle run
+                if event.type == pygame.QUIT:
+                    self.run = False
+                #elif event.type == pygame.ADDENEMY:
+
+            # Update time delta
+            self.dt = self.clock.tick(self.fps)
+
+            # Update key state
+            self.keyState = pygame.key.get_pressed()
+
+            horizontalDirection, verticalDirection, firing = self.parse_keyState()
+
+            # Movement
+            self.player.move(verticalDirection, horizontalDirection)
+
+            # Projectile spawn
+            if firing:
+                # Number of supported bullets on screen
+                if len(self.bullets) < 5:
+                    # Adds bullet to bullets sprite group
+                    self.bullets.add(Projectile(round(self.player.x + self.player.width // 2), round(self.player.y + self.player.height // 2), 6, color=(0,0,0), facing=self.player.left_facing, velocity=int(50)))
+
+                self.world.add(self.bullets)
+
+            # Collision detection:
+            if self.enemies:
+                if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
+                    self.player.lives -= 1
+                    # TODO: Explosion or flashing or something?
+
+                    if self.player.lives <= 0:
+                        self.player.kill()
+                        # TODO: Game over screen...
+
+            elif self.bullets:
+                for bullet in self.bullets:
+                    if bullet.x > self.screenWidth or bullet.x < 0:
+                        self.bullets.remove(bullet)
+
+                    if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
+                        #TODO: Remove enemies and bullets from respective trackers and self.world
+                        continue
+            else:
+                # TODO: Display success and move to next level
+                pass
+
+
+            # TODO: Should really consider scenes... Ugh. Why so complicated?
+
+            # Insert music here
+
+
+            self.redrawGameWindow()
+
+            # Check to see if player is out of lives?
+            if self.player.lives <= 0 or self.keyState[pygame.K_ESCAPE]:
+                self.run = False
+
+    def parse_keyState(self):
+        '''Parses pressed keys'''
+        # Quit
+        if self.keyState[pygame.K_ESCAPE]:
+            self.run = False
+
+        # Movement
+        # If > 0: up/left else down/right
+        verticalDirection = 0
+        horizontalDirection = 0
+
+        # Directional keys
+        if self.keyState[pygame.K_w] or self.keyState[pygame.K_s]:
+            verticalDirection = self.keyState[pygame.K_s] - self.keyState[pygame.K_w]
+        elif self.keyState[pygame.K_UP] or self.keyState[pygame.K_DOWN]:
+            verticalDirection = self.keyState[pygame.K_DOWN] - self.keyState[pygame.K_UP]
+        if self.keyState[pygame.K_a] or self.keyState[pygame.K_d]:
+            horizontalDirection = self.keyState[pygame.K_d] - self.keyState[pygame.K_a]
+        elif self.keyState[pygame.K_LEFT] or self.keyState[pygame.K_RIGHT]:
+            horizontalDirection = self.keyState[pygame.K_RIGHT] - self.keyState[pygame.K_LEFT]
+
+        # Weapon-related
+        firing = self.keyState[pygame.K_SPACE]
+
+        return horizontalDirection, verticalDirection, firing
+
+    def redrawGameWindow(self):
+        """redrawGameWindow function will fill the window with the specific RGB value and then call on each
+        object's .draw() method in order to populate it to the window. """
+        black = (0, 0, 0)
+
+        # Clear screen
+        self.screen.fill(black)
+
+        # Draw background
+        self.screen.blit(self.background, (0,0))
+
+        # Update camera
+        self.camera.update(self.player)
+
+        for entity in self.world:
+            entity.update(self.dt)
+            entity.draw(self.screen, self.camera.apply(entity))
+
+        # Update the main display
+        pygame.display.update()
+
 class Entity(pygame.sprite.Sprite):
     """This is the top-level class for any character entity that will exist on the screen in-game.
     It extends the Pygame Sprite class (https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.Sprite)
@@ -150,12 +345,10 @@ class Player(Entity):
         # Update self.rectangle with new coords
         self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
-
-# TODO: Projectile Class subclass of entity (Matt)
 class Projectile(Entity):
 
-    def __init__(self, x, y, radius, color, facing):
-        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=5)
+    def __init__(self, x, y, radius, color, facing, velocity):
+        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity)
         self.x = int(x)
         self.y = int(y)
         self.radius = radius
@@ -189,206 +382,7 @@ class BackgroundObjects(Entity):
     def move(self):
         return NotImplemented
 
-class Camera(object):
-    '''https://stackoverflow.com/questions/14354171/add-scrolling-to-a-platformer-in-pygame'''
-    def __init__(self, cameraFunc, width, height):
-        self.width = width
-        self.height = height
-        self.state = pygame.Rect(0,0, self.width, self.height)
-        self.cameraFunc = cameraFunc
-
-    def apply(self, target):
-        if target.rect != None:
-            t = pygame.Rect(target.rect)
-            return t.move(self.state.topleft)
-
-    def update(self, target):
-        if isinstance(target, Player):
-            self.state = self.cameraFunc(self.state, target.rect, self.width, self.height)
-
-
-class ControlManager(object):
-    """Class for tracking game states & managing event loop
-        https://github.com/Mekire/pygame-samples/blob/master/platforming/moving_platforms.py
-    """
-
-    def __init__(self, caption, screenWidth=1500, screenHeight=750):
-        """Initialize the display and prepare game objects"""
-        # Screen settings
-        self.screenWidth = screenWidth
-        self.screenHeight = screenHeight
-        self.fps = 60
-
-        # Screen attributes
-        pygame.display.set_caption(caption)
-        self.screen = pygame.display.set_mode((self.screenWidth, self.screenHeight))
-        self.screen_rect = self.screen.get_rect()
-        self.viewport = self.screen.get_rect()
-
-        # TODO: what does this do? Is it only used for text???
-        self.level = pygame.Surface((1000, 1000)).convert()
-        self.level_rect = self.level.get_rect()
-
-        # TODO: How do we handle level transitions?
-        self.background = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
-        self.background = pygame.transform.scale(self.background, (self.screenWidth, self.screenHeight))
-
-        # Core settings
-        self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
-        self.dt = None
-        self.keyState = None
-        self.run = True
-
-        # Sprite trackers
-        self.world = pygame.sprite.Group()
-        self.enemies = pygame.sprite.Group()
-        self.players = pygame.sprite.Group()
-        self.bullets = pygame.sprite.Group()
-
-        # Sprite initialization
-        self.player = Player()
-        self.create_enemies()
-
-        # Add sprites to "global" tracker
-        self.world.add(self.player)
-        self.players.add(self.player)
-
-        for e in self.enemies:
-            self.world.add(e)
-
-
-    def redrawGameWindow(self):
-        """redrawGameWindow function will fill the window with the specific RGB value and then call on each
-        object's .draw() method in order to populate it to the window. """
-        black = (0, 0, 0)
-
-        # Clear screen
-        self.screen.fill(black)
-
-        # Draw background
-        self.screen.blit(self.background, (0,0))
-
-        # Update camera
-        self.camera.update(self.player)
-
-        for entity in self.world:
-            # TODO: Should update and draw be the same thing?
-            #   One updates the position/animation
-            #   The other draws everything to the screen
-            #   self.screen.blit()?
-            entity.update(self.dt)
-            entity.draw(self.screen, self.camera.apply(entity))
-
-        # Update the main display
-        pygame.display.update()
-
-    def create_enemies(self):
-        # TODO: different amount/types depending on level?
-        # TODO: THIS IS A TEST
-        # evilPlayer = Player()
-        # self.enemies.add(evilPlayer)
-        pass
-
-    def make_text(self, message):
-        """Renders text object to the screen"""
-        font = pygame.font.Font(None, 100)
-        text = font.render(message, True, (100, 100, 175))
-        rect = text.get_rect(centerx=self.level_rect.centerx, y=100)
-
-        return text, rect
-
-    def main_loop(self):
-        """This loop represents all the actions that need to be taken during one cycle:
-                1. Update world based on what user did
-                2. Clear screen w/ win.fill(black)
-                3. Redraw the graphics for the world
-                4. Call pygame.display.update to update graphics on screen.
-        """
-        while self.run:
-            # check events
-            for event in pygame.event.get():
-                # If user clicks red X, toggle run
-                if event.type == pygame.QUIT:
-                    self.run = False
-                #elif event.type == pygame.ADDENEMY:
-
-            # Update time delta
-            self.dt = self.clock.tick(self.fps)
-
-            # Update key state
-            self.keyState = pygame.key.get_pressed()
-
-            horizontalDirection, verticalDirection, firing = self.parse_keyState()
-
-            # Movement
-            self.player.move(verticalDirection, horizontalDirection)
-
-            # Projectile spawn
-            if firing:
-                # Number of supported bullets on screen
-                if len(self.bullets) < 2:
-                    # Adds bullet to bullets sprite group
-                    self.bullets.add(Projectile((self.player.x + self.player.width // 2), round(self.player.y + self.player.height // 2), 6, (0,0,0), self.player.left_facing))
-
-                self.world.add(self.bullets)
-
-            # Collision detection:
-            if self.enemies:
-                if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
-                    self.player.lives -= 1
-                    # TODO: Explosion or flashing or something?
-
-                    if self.player.lives <= 0:
-                        self.player.kill()
-                        # TODO: Game over screen...
-
-            elif self.bullets:
-                for bullet in self.bullets:
-                    if bullet.x > self.screenWidth or bullet.x < 0:
-                        self.bullets.remove(bullet)
-
-                    if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
-                        #TODO: Remove enemies and bullets from respective trackers and self.world
-                        continue
-            else:
-                # TODO: Display success and move to next level
-                pass
-
-
-            # TODO: Should really consider scenes... Ugh. Why so complicated?
-
-            # Insert music here
-
-
-            self.redrawGameWindow()
-
-            # Check to see if player is out of lives?
-            if self.player.lives <= 0 or self.keyState[pygame.K_ESCAPE]:
-                self.run = False
-
-    def parse_keyState(self):
-        '''Parses pressed keys'''
-
-
-        # Movement
-        # If > 0: up/left else down/right
-        verticalDirection = 0
-        horizontalDirection = 0
-        if self.keyState[pygame.K_w] or self.keyState[pygame.K_s]:
-            verticalDirection = self.keyState[pygame.K_s] - self.keyState[pygame.K_w]
-        elif self.keyState[pygame.K_UP] or self.keyState[pygame.K_DOWN]:
-            verticalDirection = self.keyState[pygame.K_DOWN] - self.keyState[pygame.K_UP]
-        if self.keyState[pygame.K_a] or self.keyState[pygame.K_d]:
-            horizontalDirection = self.keyState[pygame.K_d] - self.keyState[pygame.K_a]
-        elif self.keyState[pygame.K_LEFT] or self.keyState[pygame.K_RIGHT]:
-            horizontalDirection = self.keyState[pygame.K_RIGHT] - self.keyState[pygame.K_LEFT]
-
-        firing = self.keyState[pygame.K_SPACE]
-
-        return horizontalDirection, verticalDirection, firing
-
-
+# MAIN ##################
 def main():
     # MAIN CODE ######################################################
     pygame.init()
