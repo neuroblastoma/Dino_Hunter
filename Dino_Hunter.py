@@ -14,6 +14,7 @@ import pygame
 import os
 from itertools import cycle
 from util import Utilities
+import random
 
 #matts edit 3/5
 
@@ -85,9 +86,8 @@ class ControlManager(object):
     def create_enemies(self):
         # TODO: different amount/types depending on level?
         # TODO: THIS IS A TEST
-        # evilPlayer = Player()
-        # self.enemies.add(evilPlayer)
-        pass
+        tRex1 = tRex(self.screenWidth, self.screenHeight)
+        self.enemies.add(tRex1)
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -133,14 +133,14 @@ class ControlManager(object):
                 self.world.add(self.bullets)
 
             # Collision detection:
-            if self.enemies:
-                if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
-                    self.player.lives -= 1
-                    # TODO: Explosion or flashing or something?
-
-                    if self.player.lives <= 0:
-                        self.player.kill()
-                        # TODO: Game over screen...
+            # if self.enemies:
+            #     if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
+            #         self.player.lives -= 1
+            #         # TODO: Explosion or flashing or something?
+            #
+            #         if self.player.lives <= 0:
+            #             self.player.kill()
+            #             # TODO: Game over screen...
 
             elif self.bullets:
                 for bullet in self.bullets:
@@ -212,6 +212,7 @@ class ControlManager(object):
 
         for entity in self.world:
             if not isinstance(entity, Player):
+                entity.move()
                 entity.update(self.dt)
                 entity.draw(self.screen, self.camera.apply(entity))
 
@@ -245,6 +246,7 @@ class Entity(pygame.sprite.Sprite):
 
     def move(self, **kwargs):
         return NotImplemented
+
 
 class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
@@ -351,10 +353,41 @@ class Player(Entity):
         # Update self.rectangle with new coords
         self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
+
+class tRex(Entity):
+    # TODO: STEVE: create tRex Dino Class
+    def __init__(self, screenWidth, screenHeight):
+        super().__init__(health=50, x=random.randrange(0,screenWidth - 121), y=screenHeight - 30, width=30, height=30, vel=random.uniform(0.5, 1.0))
+        self.rgb = (255, 0, 0)
+        self.end = screenWidth - (self.width * random.randrange(2, 4))
+        self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def draw(self, win, R):
+        self.move()
+        pygame.draw.rect(win, self.rgb, self.rect)
+
+    def move(self):
+        if self.vel > 0:
+            if self.x + self.vel < self.path[1]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+        else:
+            if self.x - self.vel > self.path[0]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+
+    def update(self, dt):
+        pass
+
+
+
 class Projectile(Entity):
 
     def __init__(self, x, y, radius, color, facing, velocity):
-        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity)
+        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity) # TODO: xVel and yVel for shooting down at dinos?
         self.x = int(x)
         self.y = int(y)
         self.radius = radius
