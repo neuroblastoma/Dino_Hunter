@@ -47,6 +47,7 @@ class ControlManager(object):
         self.screenWidth = screenWidth
         self.screenHeight = screenHeight
         self.fps = 60
+        self.current_level = -1
 
         # Screen attributes
         pygame.display.set_caption(caption)
@@ -93,14 +94,23 @@ class ControlManager(object):
     def create_enemies(self):
         # TODO: different amount/types depending on level?
         # TODO: For level: Test
-        level = "test"
-        if level == "test":
+        base = (2,4,3)
+        self.current_level += 1
+        if self.current_level == 0:
             for i in range(1):
                 self.enemies.add(tRex(self.screenWidth, self.screenHeight))
             for i in range(1):
                 self.enemies.add(raptor(self.screenWidth, self.screenHeight))
             for i in range(1):
                 self.enemies.add(ptero(self.screenWidth, self.screenHeight))
+        else:
+            for i in range(base[0] * self.current_level):
+                self.enemies.add(tRex(self.screenWidth, self.screenHeight))
+            for i in range(base[1] * self.current_level):
+                self.enemies.add(raptor(self.screenWidth, self.screenHeight))
+            for i in range(base[2] * self.current_level):
+                self.enemies.add(ptero(self.screenWidth, self.screenHeight))
+
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -117,6 +127,7 @@ class ControlManager(object):
                 3. Redraw the graphics for the world
                 4. Call pygame.display.update to update graphics on screen.
         """
+        level = 0
         while self.run:
             # check events
             for event in pygame.event.get():
@@ -192,10 +203,23 @@ class ControlManager(object):
                     #     print("BULLET COLLISION!")
 
 
-
+            if self.enemies:
+                pass
             else:
                 # TODO: Display success and move to next level
-                pass
+                counter = 100
+                while counter > 0:
+                    # Draw Level Complete
+                    font = pygame.font.SysFont('comicsans', 100, True)
+                    level_txt = font.render("LEVEL COMPLETE!" + str(counter%10), 1, (0, 255, 0))
+                    self.screen.blit(level_txt, (375, 300))
+                    counter -= 1
+                    print("counter =",counter)
+                    pygame.display.update()
+                    self.redrawGameWindow()
+                self.create_enemies()
+                for e in self.enemies:
+                    self.world.add(e)
 
             # TODO: Should really consider scenes... Ugh. Why so complicated?
 
@@ -264,7 +288,6 @@ class ControlManager(object):
         text2 = font2.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
         self.screen.blit(text2, (650, 10))
         # Update the main display
-
 
         # Draw Player Health
         font3 = pygame.font.SysFont('comicsans', 25, True)
@@ -358,8 +381,8 @@ class Player(Entity):
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), target)
 
-        pygame.draw.rect(surface, (255, 0, 0), (35, 5, 100, 20))
-        pygame.draw.rect(surface, (0, 255, 0), (35, 5, 100 - ((100 / 100) * (100 - self.health)), 20))
+        pygame.draw.rect(surface, (255, 0, 0), (25, 5, 200, 20))
+        pygame.draw.rect(surface, (0, 255, 0), (25, 5, 200 - ((200 / 100) * (100 - self.health)), 20))
 
     def move(self, vdir, hdir):
         """Moves player based on keyboard input and tracks facing direct. Movement is not instantaneous.
