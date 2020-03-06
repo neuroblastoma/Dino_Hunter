@@ -421,9 +421,9 @@ class ptero(Entity):
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
 
         # y-values
-        self.y_vel = random.uniform(0,2)
+        self.y_vel = random.uniform(0.5,2)
         self.y_end = screenHeight - (self.height * random.randrange(2, 4))
-        self.y_path = [0 + (self.height * random.randrange(2,4)), self.end]
+        self.y_path = [0 + (self.height * random.randrange(2,4)), self.y_end]
 
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
@@ -446,12 +446,12 @@ class ptero(Entity):
 
         # y-based movements
         if self.y_vel > 0:
-            if self.y + self.y_vel < self.path[1]:
+            if self.y + self.y_vel < self.y_path[1]:
                 self.y += self.y_vel
             else:
                 self.y_vel = self.y_vel * -1
         else:
-            if self.y + self.y_vel > self.path[0]:
+            if self.y + self.y_vel > self.y_path[0]:
                 self.y += self.y_vel
             else:
                 self.y_vel = self.y_vel * -1
