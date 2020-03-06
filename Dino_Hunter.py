@@ -16,8 +16,6 @@ from itertools import cycle
 from util import Utilities
 import random
 
-#matts edit 3/5
-#Steve's edit 3/5 hello?
 
 # CLASSES ##################
 class Camera(object):
@@ -89,6 +87,9 @@ class ControlManager(object):
         # TODO: THIS IS A TEST
         tRex1 = tRex(self.screenWidth, self.screenHeight)
         self.enemies.add(tRex1)
+
+        raptor1 = raptor(self.screenWidth, self.screenHeight)
+        self.enemies.add(raptor1)
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -376,6 +377,34 @@ class tRex(Entity):
             else:
                 self.vel = self.vel * -1
 
+        self.rect = pygame.Rect(self.x, self.y, 30, 30)
+
+
+class raptor(Entity):
+    def __init__(self, screenWidth, screenHeight):
+        super().__init__(health=25, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15, vel=random.uniform(4,6))
+        self.rgb = (255, 255, 255)
+        self.end = screenWidth - (self.width * random.randrange(2,4))
+        self.path = [0 + (self.width * random.randrange(2,4)), self.end]
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def draw(self, win, R):
+        self.move()
+        pygame.draw.rect(win, self.rgb, self.rect)
+
+    def move(self):
+        if self.vel > 0:
+            if self.x + self.vel < self.path[1]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+        else:
+            if self.x - self.vel > self.path[0]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+
+        self.rect = pygame.Rect(self.x, self.y, 15, 15)
 
 
 class Projectile(Entity):
