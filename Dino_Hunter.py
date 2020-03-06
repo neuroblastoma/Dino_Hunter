@@ -95,14 +95,23 @@ class ControlManager(object):
     def create_enemies(self):
         # TODO: different amount/types depending on level?
         # TODO: THIS IS A TEST
-        tRex1 = tRex(self.screenWidth, self.screenHeight)
-        self.enemies.add(tRex1)
+        level = 1
+        if level == 1:
+            tRex1 = tRex(self.screenWidth, self.screenHeight)
+            self.enemies.add(tRex1)
+            for i in range(2):
+                self.enemies.add(tRex(self.screenWidth,self.screenHeight))
 
-        raptor1 = raptor(self.screenWidth, self.screenHeight)
-        self.enemies.add(raptor1)
 
-        ptero1 = ptero(self.screenWidth, self.screenHeight)
-        self.enemies.add(ptero1)
+            raptor1 = raptor(self.screenWidth, self.screenHeight)
+            self.enemies.add(raptor1)
+            for i in range(5):
+                self.enemies.add(raptor(self.screenWidth, self.screenHeight))
+
+            ptero1 = ptero(self.screenWidth, self.screenHeight)
+            self.enemies.add(ptero1)
+            for i in range(2):
+                self.enemies.add(ptero(self.screenWidth, self.screenHeight))
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -175,7 +184,7 @@ class ControlManager(object):
                         # TODO: Remove enemies and bullets from respective trackers and self.world
                         self.bullets.remove(bullet)
                         self.world.remove(bullet)
-                        self.world.remove(enemies)
+                        self.world.remove(self.enemies) # TODO: figure out enemy deletion; then enemy health reduction
 
             else:
                 # TODO: Display success and move to next level
@@ -388,7 +397,6 @@ class Player(Entity):
 
 
 class tRex(Entity):
-    # TODO: STEVE: create tRex Dino Class
     def __init__(self, screenWidth, screenHeight):
         super().__init__(health=50, x=random.randrange(0,screenWidth - 121), y=screenHeight - 30, width=30, height=30, vel=random.uniform(0.5, 1.0))
         self.rgb = (255, 0, 0)
@@ -445,7 +453,7 @@ class raptor(Entity):
 class ptero(Entity):
     def __init__(self, screenWidth, screenHeight):
         super().__init__(health=25, x=random.randrange(screenWidth - 120, screenWidth - 61), y=random.randrange(60,screenHeight - 60), width=15, height=15,
-                         vel=random.uniform(2, 3))
+                         vel=random.uniform(-2, 3))
         self.rgb = (255, 255, 0)
 
         # x-values
@@ -453,7 +461,7 @@ class ptero(Entity):
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
 
         # y-values
-        self.y_vel = random.uniform(0.5,2)
+        self.y_vel = random.uniform(-2,2)
         self.y_end = screenHeight - (self.height * random.randrange(2, 4))
         self.y_path = [0 + (self.height * random.randrange(2,4)), self.y_end]
 
@@ -469,12 +477,12 @@ class ptero(Entity):
             if self.x + self.vel < self.path[1]:
                 self.x += self.vel
             else:
-                self.vel = self.vel * -1
+                self.vel = (self.vel + .2)* -1
         else:
             if self.x - self.vel > self.path[0]:
                 self.x += self.vel
             else:
-                self.vel = self.vel * -1
+                self.vel = (self.vel - .2) * -1
 
         # y-based movements
         if self.y_vel > 0:
