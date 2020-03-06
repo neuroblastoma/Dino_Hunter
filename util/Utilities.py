@@ -1,5 +1,6 @@
 import pygame
 
+
 class SpriteSheet(object):
     '''
     Create individual surfaces from a single image source (i.e., sprite sheet)
@@ -9,6 +10,7 @@ class SpriteSheet(object):
 
     Parameters: filename, rows, columns
     '''
+
     def __init__(self, filename, rows, columns):
         try:
             self.sheet = pygame.image.load(filename).convert()
@@ -37,32 +39,37 @@ class SpriteSheet(object):
                 # Append sprite dimensions to a list of rectangles
                 rects.append((x, y, spriteWidth, spriteHeight))
 
-
         # Create a list of Pygame Surface objects
         retSurfaces = []
         for rect in rects:
             surface = pygame.Surface((rect[2], rect[3]), 0, self.sheet)
-            surface.blit(self.sheet, (0,0), rect, pygame.BLEND_RGBA_ADD)
+            surface.blit(self.sheet, (0, 0), rect, pygame.BLEND_RGBA_ADD)
 
             retSurfaces.append(surface)
 
         return retSurfaces
 
+
 def simple_camera(camera, rect, screenWidth, screenHeight):
     left, top, _, _ = rect
     _, _, width, height = camera
 
-    return pygame.Rect(-left + (screenWidth/2), -top + (screenHeight/2), width, height)
+    return pygame.Rect(-left + (screenWidth / 2), -top + (screenHeight / 2), width, height)
 
 
-def complex_camera(camera, rect, screenWidth, screenHeight):
-    # we want to center target_rect
-    x = -rect.center[0] + screenWidth/2
-    y = -rect.center[1] + screenHeight/2
-    # move the camera. Let's use some vectors so we can easily substract/multiply
-    camera.topleft += (pygame.Vector2((x, y)) - pygame.Vector2(camera.topleft)) * 0.06 # add some smoothness coolnes
-    # set max/min x/y so we don't see stuff outside the world
-    camera.x = max(-(camera.width-screenWidth), min(0, camera.x))
-    camera.y = max(-(camera.height-screenHeight), min(0, camera.y))
+def complex_camera(camera, entity, screenWidth, screenHeight):
+    """Tracks the position of the given entity and locks screen to their x position"""
+    # Center on entity
+    x = -entity.rect.center[0] + screenWidth / 2
+    #y = -entity.rect.center[1] + screenHeight / 2
+
+    # Move the camera
+    camera.topleft += (pygame.Vector2((x, entity.y)) - pygame.Vector2(camera.topleft))  # * 0.06
+    print(camera.topleft)
+
+    # if camera.topleft[0] > 1000:
+    #     camera.topleft = (0, entity.y)
+    # elif camera.topleft[0] < -500:
+    #     camera.topleft = (1000, entity.y)
 
     return camera

@@ -14,12 +14,14 @@ import pygame
 import os
 from itertools import cycle
 from util import Utilities
-import random
 
+# added so that score could be displayed
+win = pygame.display.set_mode((500,480))
 
 # CLASSES ##################
 class Camera(object):
     '''https://stackoverflow.com/questions/14354171/add-scrolling-to-a-platformer-in-pygame'''
+
     def __init__(self, cameraFunc, width, height):
         self.width = width
         self.height = height
@@ -27,10 +29,11 @@ class Camera(object):
         self.cameraFunc = cameraFunc
 
     def apply(self, target):
+        """Applies camera offset to given target"""
         return target.rect.move(self.offsetState.topleft)
 
     def update(self, target):
-        self.offsetState = self.cameraFunc(self.offsetState, target.rect, self.width, self.height)
+        self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
 
 class ControlManager(object):
     """Class for tracking game states & managing event loop
@@ -42,6 +45,7 @@ class ControlManager(object):
         # Screen settings
         self.screenWidth = screenWidth
         self.screenHeight = screenHeight
+        self.levelWidth = self.screenWidth + 400
         self.fps = 60
 
         # Screen attributes
@@ -56,27 +60,32 @@ class ControlManager(object):
 
         # TODO: How do we handle level transitions?
         self.background = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
-        self.background = pygame.transform.scale(self.background, (self.screenWidth, self.screenHeight))
+        self.background = pygame.transform.scale(self.background, (self.levelWidth, self.screenHeight))
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.simple_camera, self.screenWidth, self.screenHeight)
+        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
+        #self.camera = pygame.Vector2(0,0)
+
         self.dt = None
         self.keyState = None
         self.run = True
 
         # Sprite trackers
-        self.world = pygame.sprite.Group()
+        #self.world = pygame.sprite.Group()
+        self.world = pygame.sprite.LayeredUpdates()
         self.enemies = pygame.sprite.Group()
         self.players = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
 
         # Sprite initialization
         self.player = Player()
+        self.background_rect = BackgroundObjects()
         self.create_enemies()
 
         # Add sprites to "global" tracker
         self.world.add(self.player)
+        self.world.add(self.background_rect)
         self.players.add(self.player)
 
         for e in self.enemies:
@@ -96,8 +105,9 @@ class ControlManager(object):
 
     def make_text(self, message):
         """Renders text object to the screen"""
-        font = pygame.font.Font(None, 100)
-        text = font.render(message, True, (100, 100, 175))
+        font = pygame.font.SysFont('comicsans', 25, True)
+        #text = font.render('Score: ' + str(score), 1, (0,0,0))
+        #win.blit(text, (390, 10))
         rect = text.get_rect(centerx=self.level_rect.centerx, y=100)
 
         return text, rect
@@ -115,7 +125,7 @@ class ControlManager(object):
                 # If user clicks red X, toggle run
                 if event.type == pygame.QUIT:
                     self.run = False
-                #elif event.type == pygame.ADDENEMY:
+                # elif event.type == pygame.ADDENEMY:
 
             # Update time delta
             self.dt = self.clock.tick(self.fps)
@@ -125,7 +135,8 @@ class ControlManager(object):
 
             horizontalDirection, verticalDirection, firing = self.parse_keyState()
 
-            # Movement
+            # Player Movement
+            self.player.animate(self.dt)
             self.player.move(verticalDirection, horizontalDirection)
 
             # Projectile spawn
@@ -133,19 +144,24 @@ class ControlManager(object):
                 # Number of supported bullets on screen
                 if len(self.bullets) < 15:
                     # Adds bullet to bullets sprite group
-                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2), round(self.player.y + 55 + self.player.height // 4), 2, color=(0,0,0), facing=self.player.left_facing, velocity=int(50)))
+                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2),
+                                                round(self.player.y + 55 + self.player.height // 4), 2, color=(0, 0, 0),
+                                                facing=self.player.left_facing, velocity=int(50)))
+
+                    #need bullet collision detection for score to increase
+                    score += 1
 
                 self.world.add(self.bullets)
 
             # Collision detection:
-            # if self.enemies:
-            #     if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
-            #         self.player.lives -= 1
-            #         # TODO: Explosion or flashing or something?
-            #
-            #         if self.player.lives <= 0:
-            #             self.player.kill()
-            #             # TODO: Game over screen...
+            if self.enemies:
+                if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
+                    self.player.lives -= 1
+                    # TODO: Explosion or flashing or something?
+
+                    if self.player.lives <= 0:
+                        self.player.kill()
+                        # TODO: Game over screen...
 
             elif self.bullets:
                 for bullet in self.bullets:
@@ -155,14 +171,20 @@ class ControlManager(object):
                         self.world.remove(bullet)
 
                     if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
-                        #TODO: Remove enemies and bullets from respective trackers and self.world
+                        # TODO: Remove enemies and bullets from respective trackers and self.world
                         continue
             else:
                 # TODO: Display success and move to next level
                 pass
 
+            # Check to see if player dies:
+            if self.player.health <= 0:
+                self.player.lives -= 1
 
-            # TODO: Should really consider scenes... Ugh. Why so complicated?
+            # Check to see if GAME OVER
+            if self.player.lives == 0:
+                self.player.kill()
+                # TODO: Game over screen...
 
             # Insert music here
 
@@ -199,6 +221,7 @@ class ControlManager(object):
 
         return horizontalDirection, verticalDirection, firing
 
+
     def redrawGameWindow(self):
         """redrawGameWindow function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
@@ -208,20 +231,25 @@ class ControlManager(object):
         self.screen.fill(black)
 
         # Draw background
-        self.screen.blit(self.background, (0,0))
+        self.screen.blit(self.background, (0, 0))
 
         # Update camera
-        self.player.animate(self.dt)
-        self.player.draw(self.screen, self.player)
         self.camera.update(self.player)
+
 
         for entity in self.world:
             if not isinstance(entity, Player):
-                entity.move()
+                entity.update(self.dt)
                 entity.draw(self.screen, self.camera.apply(entity))
+
+        # Draw scoreboard
+        font = pygame.font.SysFont('comicsans', 25, True)
+        text = font.render('Score: ' + str(score), 1, (0,0,0))
+        win.blit(text, (390, 10))
 
         # Update the main display
         pygame.display.update()
+
 
 class Entity(pygame.sprite.Sprite):
     """This is the top-level class for any character entity that will exist on the screen in-game.
@@ -247,7 +275,7 @@ class Entity(pygame.sprite.Sprite):
 
     def move(self, **kwargs):
         return NotImplemented
-
+score = 0
 
 class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
@@ -274,7 +302,8 @@ class Player(Entity):
 
         # Animation #####################################################################
         # Load player sprite sheet
-        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1, columns=6)
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1,
+                                           columns=6)
 
         # TODO: Need to do the proper math for frame_duration
         self.timer = 0
@@ -300,7 +329,6 @@ class Player(Entity):
         """Blit the player to the window"""
 
         # TODO: Add animation that triggers when facing changes
-        # TODO: Remember: target was self.rect
 
         if self.left_facing:
             surface.blit(self.frame, target)
@@ -465,12 +493,12 @@ class ptero(Entity):
 class Projectile(Entity):
 
     def __init__(self, x, y, radius, color, facing, velocity):
-        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity) # TODO: xVel and yVel for shooting down at dinos?
+        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity)
         self.x = int(x)
         self.y = int(y)
         self.radius = radius
         self.color = color
-        self.rect = pygame.Rect(self.x - radius, self.y - radius, radius*2, radius*2)
+        self.rect = pygame.Rect(self.x - radius, self.y - radius, radius * 2, radius * 2)
         self.facing = facing
 
     def draw(self, surface, target):
@@ -482,15 +510,24 @@ class Projectile(Entity):
         else:
             self.x += self.vel
 
-class BackgroundObjects(Entity):
-    def __init__(self, health, x, y, width, height, vel):
-        super().__init__(health, x, y, width, height, vel)
 
-    def draw(self):
-        return NotImplemented
+class BackgroundObjects(Entity):
+    def __init__(self, health=100, x=1500/2, y=720, width=500, height=500, vel=0):
+        super().__init__(health, x, y, width, height, vel)
+        self.rgb = (255, 0, 0)
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def draw(self, win, offset_rect):
+        self.rect = offset_rect
+        self.rect.y = self.y
+
+        print(self.rect)
+        pygame.draw.rect(win, self.rgb, self.rect)
 
     def move(self):
         return NotImplemented
+
+
 
 # MAIN ##################
 def main():
