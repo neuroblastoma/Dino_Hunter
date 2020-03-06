@@ -425,7 +425,8 @@ class tRex(Entity):
 
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=25, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15, vel=random.uniform(4,6))
+        super().__init__(health=25, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15,
+                         vel=random.uniform(4,6))
         self.rgb = (255, 165, 0)
         self.end = screenWidth - (self.width * random.randrange(2,4))
         self.path = [0 + (self.width * random.randrange(2,4)), self.end]
