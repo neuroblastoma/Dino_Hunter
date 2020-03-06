@@ -203,7 +203,7 @@ class ControlManager(object):
                 while counter > 0:
                     # Draw Level Complete
                     font = pygame.font.SysFont('comicsans', 100, True)
-                    level_txt = font.render("LEVEL COMPLETE!" + str(counter%10), 1, (0, 255, 0))
+                    level_txt = font.render("LEVEL COMPLETE!" + str(counter), 1, (0, 255, 0))
                     self.screen.blit(level_txt, (375, 300))
                     counter -= 1
                     print("counter =",counter)
