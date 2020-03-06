@@ -10,6 +10,8 @@
 # Steven Gore
 # John Lytle
 
+# Working on collision_detection branch
+
 import pygame
 import os
 from itertools import cycle
