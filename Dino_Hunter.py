@@ -194,14 +194,6 @@ class ControlManager(object):
                         self.bullets.remove(bullet)
                         self.world.remove(bullet)
 
-                    # pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True)
-                    # if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
-                    #     #TODO: Remove enemies and bullets from respective trackers and self.world
-                    #     self.bullets.remove(bullet)
-                    #     self.world.remove(bullet)
-                    #
-                    #     print("BULLET COLLISION!")
-
 
             if self.enemies:
                 pass
