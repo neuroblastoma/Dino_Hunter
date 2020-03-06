@@ -84,6 +84,10 @@ class ControlManager(object):
         for e in self.enemies:
             self.world.add(e)
 
+        # score / lives settings
+        self.score = 0
+        self.lives = 3
+
     def create_enemies(self):
         # TODO: different amount/types depending on level?
         # TODO: THIS IS A TEST
@@ -220,7 +224,7 @@ class ControlManager(object):
         """redrawGameWindow function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
         black = (0, 0, 0)
-
+        
         # Clear screen
         self.screen.fill(black)
 
@@ -237,6 +241,15 @@ class ControlManager(object):
                 entity.move()
                 entity.draw(self.screen, self.camera.apply(entity))
 
+        # Draw Player scoreboard
+        font = pygame.font.SysFont('comicsans', 45, True)
+        text = font.render('Score: ' + str(self.score), 1, (0,0,0))
+        self.screen.blit(text, (390, 10))
+
+        # Draw Player lives tracker
+        font2 = pygame.font.SysFont('comicsans', 45, True)
+        text2 = font2.render('Player Lives: ' + str(self.lives), 1, (0, 255, 0))
+        self.screen.blit(text2, (650, 10))
         # Update the main display
         pygame.display.update()
 
@@ -265,7 +278,6 @@ class Entity(pygame.sprite.Sprite):
     def move(self, **kwargs):
         return NotImplemented
 
-
 class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
     # Rules: Clipping/Sprite collision: player will lose health if collides with any other object
@@ -278,7 +290,7 @@ class Player(Entity):
 
         # TODO: Sounds
         self.lives = 3
-
+        self.score = 0
         # Speed related ##################################################################
         # TODO: This should be both vertical and horizontal speed
         self.max_speed = 7
@@ -525,6 +537,10 @@ def main():
 
     # Something, something containers?
     # TODO: containers may be the same as the world list below... more research needed
+
+
+
+
 
     # GAME LOOP ######################################################
     game.main_loop()
