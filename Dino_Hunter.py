@@ -14,6 +14,7 @@ import pygame
 import os
 from itertools import cycle
 from util import Utilities
+import random
 
 # added so that score could be displayed
 win = pygame.display.set_mode((500,480))
@@ -149,7 +150,7 @@ class ControlManager(object):
                                                 facing=self.player.left_facing, velocity=int(50)))
 
                     #need bullet collision detection for score to increase
-                    score += 1
+                    # score += 1
 
                 self.world.add(self.bullets)
 
@@ -172,7 +173,10 @@ class ControlManager(object):
 
                     if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
                         # TODO: Remove enemies and bullets from respective trackers and self.world
-                        continue
+                        self.bullets.remove(bullet)
+                        self.world.remove(bullet)
+                        self.world.remove(enemies)
+
             else:
                 # TODO: Display success and move to next level
                 pass
