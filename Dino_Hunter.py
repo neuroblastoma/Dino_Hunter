@@ -90,15 +90,15 @@ class ControlManager(object):
 
     def create_enemies(self):
         # TODO: different amount/types depending on level?
-        # TODO: For level 1
-        for i in range(2):
-            self.enemies.add(tRex(self.screenWidth, self.screenHeight))
-
-        for i in range(5):
-            self.enemies.add(raptor(self.screenWidth, self.screenHeight))
-
-        for i in range(3):
-            self.enemies.add(ptero(self.screenWidth, self.screenHeight))
+        # TODO: For level: Test
+        level = "test"
+        if level == "test":
+            for i in range(1):
+                self.enemies.add(tRex(self.screenWidth, self.screenHeight))
+            for i in range(1):
+                self.enemies.add(raptor(self.screenWidth, self.screenHeight))
+            for i in range(1):
+                self.enemies.add(ptero(self.screenWidth, self.screenHeight))
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -134,27 +134,29 @@ class ControlManager(object):
             # Movement
             self.player.move(verticalDirection, horizontalDirection)
 
+            # Player-enemy collision detection:
+            if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
+                self.player.health -= 1
+                print("Player heatlh =", self.player.health)
+                if self.player.health <= 0:
+                    self.player.lives -= 1
+                    self.player.health = 100
+                # TODO: Explosion or flashing or something?
+
+                if self.player.lives <= 0:
+                    self.player.kill()
+                    # TODO: Game over screen...
+
             # Projectile spawn
             if firing:
                 # Number of supported bullets on screen
-                if len(self.bullets) < 15:
+                if len(self.bullets) < 5:
                     # Adds bullet to bullets sprite group
                     self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2),
                                                 round(self.player.y + 55 + self.player.height // 4), 2,
                                                 color=(255, 255, 255), facing=self.player.left_facing,
                                                 velocity=int(50)))
-
                 self.world.add(self.bullets)
-
-            # Collision detection:
-            # if self.enemies:
-            #     if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
-            #         self.player.lives -= 1
-            #         # TODO: Explosion or flashing or something?
-            #
-            #         if self.player.lives <= 0:
-            #             self.player.kill()
-            #             # TODO: Game over screen...
 
             if self.bullets:
                 for bullet in self.bullets:
@@ -255,7 +257,7 @@ class ControlManager(object):
 
         # Draw Player lives tracker
         font2 = pygame.font.SysFont('comicsans', 45, True)
-        text2 = font2.render('Player Lives: ' + str(self.lives), 1, (0, 255, 0))
+        text2 = font2.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
         self.screen.blit(text2, (650, 10))
         # Update the main display
         pygame.display.update()
@@ -421,7 +423,7 @@ class tRex(Entity):
 
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=25, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15, vel=random.uniform(4,6))
+        super().__init__(health=15, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15, vel=random.uniform(4,6))
         self.rgb = (255, 165, 0)
         self.end = screenWidth - (self.width * random.randrange(2,4))
         self.path = [0 + (self.width * random.randrange(2,4)), self.end]
@@ -448,7 +450,8 @@ class raptor(Entity):
 
 class ptero(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=25, x=random.randrange(screenWidth - 120, screenWidth - 61), y=random.randrange(60,screenHeight - 60), width=15, height=15,
+        super().__init__(health=5, x=random.randrange(screenWidth - 120, screenWidth - 61),
+                         y=random.randrange(60, screenHeight - 60), width=15, height=15,
                          vel=random.uniform(2, 3))
         self.rgb = (255, 255, 0)
 
@@ -463,7 +466,7 @@ class ptero(Entity):
 
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
-    def draw(self, win, R):
+    def draw(self, win, r):
         self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
 
