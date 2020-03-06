@@ -14,10 +14,9 @@ import pygame
 import os
 from itertools import cycle
 from util import Utilities
-import random
 
-#matts edit 3/5
-#Steve's edit 3/5 hello?
+# added so that score could be displayed
+win = pygame.display.set_mode((500,480))
 
 # CLASSES ##################
 class Camera(object):
@@ -87,13 +86,15 @@ class ControlManager(object):
     def create_enemies(self):
         # TODO: different amount/types depending on level?
         # TODO: THIS IS A TEST
-        tRex1 = tRex(self.screenWidth, self.screenHeight)
-        self.enemies.add(tRex1)
+        # evilPlayer = Player()
+        # self.enemies.add(evilPlayer)
+        pass
 
     def make_text(self, message):
         """Renders text object to the screen"""
-        font = pygame.font.Font(None, 100)
-        text = font.render(message, True, (100, 100, 175))
+        font = pygame.font.SysFont('comicsans', 25, True)
+        #text = font.render('Score: ' + str(score), 1, (0,0,0))
+        #win.blit(text, (390, 10))
         rect = text.get_rect(centerx=self.level_rect.centerx, y=100)
 
         return text, rect
@@ -131,17 +132,20 @@ class ControlManager(object):
                     # Adds bullet to bullets sprite group
                     self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2), round(self.player.y + 55 + self.player.height // 4), 2, color=(0,0,0), facing=self.player.left_facing, velocity=int(50)))
 
+                    #need bullet collision detection for score to increase
+                    score += 1
+                    
                 self.world.add(self.bullets)
 
             # Collision detection:
-            # if self.enemies:
-            #     if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
-            #         self.player.lives -= 1
-            #         # TODO: Explosion or flashing or something?
-            #
-            #         if self.player.lives <= 0:
-            #             self.player.kill()
-            #             # TODO: Game over screen...
+            if self.enemies:
+                if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
+                    self.player.lives -= 1
+                    # TODO: Explosion or flashing or something?
+
+                    if self.player.lives <= 0:
+                        self.player.kill()
+                        # TODO: Game over screen...
 
             elif self.bullets:
                 for bullet in self.bullets:
@@ -194,6 +198,7 @@ class ControlManager(object):
         firing = self.keyState[pygame.K_SPACE]
 
         return horizontalDirection, verticalDirection, firing
+    
 
     def redrawGameWindow(self):
         """redrawGameWindow function will fill the window with the specific RGB value and then call on each
@@ -213,10 +218,14 @@ class ControlManager(object):
 
         for entity in self.world:
             if not isinstance(entity, Player):
-                entity.move()
                 entity.update(self.dt)
                 entity.draw(self.screen, self.camera.apply(entity))
 
+        # Draw scoreboard
+        font = pygame.font.SysFont('comicsans', 25, True)
+        text = font.render('Score: ' + str(score), 1, (0,0,0))
+        win.blit(text, (390, 10))
+        
         # Update the main display
         pygame.display.update()
 
@@ -247,7 +256,7 @@ class Entity(pygame.sprite.Sprite):
 
     def move(self, **kwargs):
         return NotImplemented
-
+score = 0
 
 class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
@@ -354,41 +363,10 @@ class Player(Entity):
         # Update self.rectangle with new coords
         self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
-
-class tRex(Entity):
-    # TODO: STEVE: create tRex Dino Class
-    def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=50, x=random.randrange(0,screenWidth - 121), y=screenHeight - 30, width=30, height=30, vel=random.uniform(0.5, 1.0))
-        self.rgb = (255, 0, 0)
-        self.end = screenWidth - (self.width * random.randrange(2, 4))
-        self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
-        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
-
-    def draw(self, win, R):
-        self.move()
-        pygame.draw.rect(win, self.rgb, self.rect)
-
-    def move(self):
-        if self.vel > 0:
-            if self.x + self.vel < self.path[1]:
-                self.x += self.vel
-            else:
-                self.vel = self.vel * -1
-        else:
-            if self.x - self.vel > self.path[0]:
-                self.x += self.vel
-            else:
-                self.vel = self.vel * -1
-
-    def update(self, dt):
-        pass
-
-
-
 class Projectile(Entity):
 
     def __init__(self, x, y, radius, color, facing, velocity):
-        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity) # TODO: xVel and yVel for shooting down at dinos?
+        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity)
         self.x = int(x)
         self.y = int(y)
         self.radius = radius
