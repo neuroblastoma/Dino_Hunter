@@ -62,7 +62,7 @@ class ControlManager(object):
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.simple_camera, self.screenWidth, self.screenHeight)
+        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
         self.dt = None
         self.keyState = None
         self.run = True
@@ -138,6 +138,10 @@ class ControlManager(object):
             # Collision detection:
             if self.enemies:
                 if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
+<<<<<<< Updated upstream
+=======
+                    # TODO: damage vice life
+>>>>>>> Stashed changes
                     self.player.lives -= 1
                     # TODO: Explosion or flashing or something?
 
@@ -145,7 +149,11 @@ class ControlManager(object):
                         self.player.kill()
                         # TODO: Game over screen...
 
+<<<<<<< Updated upstream
             elif self.bullets:
+=======
+            if self.bullets:
+>>>>>>> Stashed changes
                 for bullet in self.bullets:
                     if bullet.x > self.screenWidth or bullet.x < 0:
                         self.bullets.remove(bullet)
@@ -157,9 +165,6 @@ class ControlManager(object):
             else:
                 # TODO: Display success and move to next level
                 pass
-
-
-            # TODO: Should really consider scenes... Ugh. Why so complicated?
 
             # Insert music here
 
@@ -204,7 +209,12 @@ class ControlManager(object):
         self.screen.blit(self.background, (0,0))
 
         # Update camera
+<<<<<<< Updated upstream
         self.player.update(self.dt)
+=======
+        self.player.animate(self.dt)
+        #self.player.draw(self.screen, self.player)
+>>>>>>> Stashed changes
         self.camera.update(self.player)
 
         # TODO: Need to track only things that have changed, not every entity
@@ -212,10 +222,16 @@ class ControlManager(object):
         dirty_rects.append(self.background.get_rect())
         change = False
         for entity in self.world:
+<<<<<<< Updated upstream
             change = entity.update(self.dt)
             if change:
                 entity.draw(self.screen, self.camera.apply(entity))
                 dirty_rects.append(entity.rect)
+=======
+            if not isinstance(entity, Player):
+                entity.move()
+            entity.draw(self.screen, self.camera.apply(entity))
+>>>>>>> Stashed changes
 
         # Update the main display
         #pygame.display.update()
@@ -358,7 +374,37 @@ class Player(Entity):
         self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
 
+<<<<<<< Updated upstream
 # TODO: Projectile Class subclass of entity (Matt)
+=======
+class tRex(Entity):
+    # TODO: STEVE: create tRex Dino Class
+    def __init__(self, screenWidth, screenHeight):
+        super().__init__(health=50, x=random.randrange(0,screenWidth - 121), y=screenHeight - 30, width=30, height=30, vel=random.uniform(0.5, 1.0))
+        self.rgb = (255, 0, 0)
+        self.end = screenWidth - (self.width * random.randrange(2, 4))
+        self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def draw(self, win, R):
+        pygame.draw.rect(win, self.rgb, self.rect)
+
+    def move(self):
+        if self.vel > 0:
+            if self.x + self.vel < self.path[1]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+        else:
+            if self.x - self.vel > self.path[0]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+
+>>>>>>> Stashed changes
 class Projectile(Entity):
 
     def __init__(self, x, y, radius, color, facing):
