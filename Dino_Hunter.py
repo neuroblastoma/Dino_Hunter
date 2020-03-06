@@ -84,6 +84,10 @@ class ControlManager(object):
         for e in self.enemies:
             self.world.add(e)
 
+        # score / lives settings
+        self.score = 0
+        self.lives = 3
+
     def create_enemies(self):
         # TODO: different amount/types depending on level?
         # TODO: THIS IS A TEST
@@ -135,7 +139,10 @@ class ControlManager(object):
                 # Number of supported bullets on screen
                 if len(self.bullets) < 15:
                     # Adds bullet to bullets sprite group
-                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2), round(self.player.y + 55 + self.player.height // 4), 2, color=(0,0,0), facing=self.player.left_facing, velocity=int(50)))
+                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2),
+                                                round(self.player.y + 55 + self.player.height // 4), 2,
+                                                color=(255, 255, 255), facing=self.player.left_facing,
+                                                velocity=int(50)))
 
                 self.world.add(self.bullets)
 
@@ -149,20 +156,32 @@ class ControlManager(object):
             #             self.player.kill()
             #             # TODO: Game over screen...
 
-            elif self.bullets:
+            if self.bullets:
                 for bullet in self.bullets:
-                    print(bullet.x)
+                    # print(bullet.x)
+                    pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True)
+                    print("COLLISION:", pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True))
+
                     if bullet.x > self.screenWidth or bullet.x < 0:
                         self.bullets.remove(bullet)
                         self.world.remove(bullet)
 
-                    if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
-                        #TODO: Remove enemies and bullets from respective trackers and self.world
-                        continue
+                    # pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True)
+                    # if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
+                    #     #TODO: Remove enemies and bullets from respective trackers and self.world
+                    #     self.bullets.remove(bullet)
+                    #     self.world.remove(bullet)
+                    #
+                    #     print("BULLET COLLISION!")
+
+                # bullet collision detection
+
+
             else:
                 # TODO: Display success and move to next level
                 pass
 
+            print("World",self.world)
 
             # TODO: Should really consider scenes... Ugh. Why so complicated?
 
@@ -205,7 +224,7 @@ class ControlManager(object):
         """redrawGameWindow function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
         black = (0, 0, 0)
-
+        
         # Clear screen
         self.screen.fill(black)
 
@@ -222,6 +241,15 @@ class ControlManager(object):
                 entity.move()
                 entity.draw(self.screen, self.camera.apply(entity))
 
+        # Draw Player scoreboard
+        font = pygame.font.SysFont('comicsans', 45, True)
+        text = font.render('Score: ' + str(self.score), 1, (0,0,0))
+        self.screen.blit(text, (390, 10))
+
+        # Draw Player lives tracker
+        font2 = pygame.font.SysFont('comicsans', 45, True)
+        text2 = font2.render('Player Lives: ' + str(self.lives), 1, (0, 255, 0))
+        self.screen.blit(text2, (650, 10))
         # Update the main display
         pygame.display.update()
 
@@ -250,7 +278,6 @@ class Entity(pygame.sprite.Sprite):
     def move(self, **kwargs):
         return NotImplemented
 
-
 class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
     # Rules: Clipping/Sprite collision: player will lose health if collides with any other object
@@ -263,7 +290,7 @@ class Player(Entity):
 
         # TODO: Sounds
         self.lives = 3
-
+        self.score = 0
         # Speed related ##################################################################
         # TODO: This should be both vertical and horizontal speed
         self.max_speed = 7
@@ -484,6 +511,8 @@ class Projectile(Entity):
         else:
             self.x += self.vel
 
+        self.rect = pygame.Rect(self.x, self.y, self.radius*2, self.radius*2)
+
 class BackgroundObjects(Entity):
     def __init__(self, health, x, y, width, height, vel):
         super().__init__(health, x, y, width, height, vel)
@@ -508,6 +537,10 @@ def main():
 
     # Something, something containers?
     # TODO: containers may be the same as the world list below... more research needed
+
+
+
+
 
     # GAME LOOP ######################################################
     game.main_loop()
