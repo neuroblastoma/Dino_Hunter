@@ -412,8 +412,8 @@ class raptor(Entity):
 
 class ptero(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=25, x=random.randrange(screenWidth - 120, screenWidth - 61), y=screenHeight//2 + random.randrange(-60,60), width=15, height=15,
-                         vel=random.uniform(4, 6))
+        super().__init__(health=25, x=random.randrange(screenWidth - 120, screenWidth - 61), y=random.randrange(60,screenHeight - 60), width=15, height=15,
+                         vel=random.uniform(2, 3))
         self.rgb = (255, 255, 0)
 
         # x-values
@@ -421,6 +421,7 @@ class ptero(Entity):
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
 
         # y-values
+        self.y_vel = random.uniform(0,2)
         self.y_end = screenHeight - (self.height * random.randrange(2, 4))
         self.y_path = [0 + (self.height * random.randrange(2,4)), self.end]
 
@@ -431,7 +432,32 @@ class ptero(Entity):
         pygame.draw.rect(win, self.rgb, self.rect)
 
     def move(self):
-        pass
+        # x-based movements
+        if self.vel > 0:
+            if self.x + self.vel < self.path[1]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+        else:
+            if self.x - self.vel > self.path[0]:
+                self.x += self.vel
+            else:
+                self.vel = self.vel * -1
+
+        # y-based movements
+        if self.y_vel > 0:
+            if self.y + self.y_vel < self.path[1]:
+                self.y += self.y_vel
+            else:
+                self.y_vel = self.y_vel * -1
+        else:
+            if self.y + self.y_vel > self.path[0]:
+                self.y += self.y_vel
+            else:
+                self.y_vel = self.y_vel * -1
+
+
+        self.rect = pygame.Rect(self.x, self.y, 15, 15)
 
 
 
