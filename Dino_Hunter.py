@@ -91,6 +91,9 @@ class ControlManager(object):
         raptor1 = raptor(self.screenWidth, self.screenHeight)
         self.enemies.add(raptor1)
 
+        ptero1 = ptero(self.screenWidth, self.screenHeight)
+        self.enemies.add(ptero1)
+
     def make_text(self, message):
         """Renders text object to the screen"""
         font = pygame.font.Font(None, 100)
@@ -383,7 +386,7 @@ class tRex(Entity):
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
         super().__init__(health=25, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15, vel=random.uniform(4,6))
-        self.rgb = (255, 255, 255)
+        self.rgb = (255, 165, 0)
         self.end = screenWidth - (self.width * random.randrange(2,4))
         self.path = [0 + (self.width * random.randrange(2,4)), self.end]
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
@@ -405,6 +408,32 @@ class raptor(Entity):
                 self.vel = self.vel * -1
 
         self.rect = pygame.Rect(self.x, self.y, 15, 15)
+
+
+class ptero(Entity):
+    def __init__(self, screenWidth, screenHeight):
+        super().__init__(health=25, x=random.randrange(screenWidth - 120, screenWidth - 61), y=screenHeight//2 + random.randrange(-60,60), width=15, height=15,
+                         vel=random.uniform(4, 6))
+        self.rgb = (255, 255, 0)
+
+        # x-values
+        self.end = screenWidth - (self.width * random.randrange(2, 4))
+        self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
+
+        # y-values
+        self.y_end = screenHeight - (self.height * random.randrange(2, 4))
+        self.y_path = [0 + (self.height * random.randrange(2,4)), self.end]
+
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def draw(self, win, R):
+        self.move()
+        pygame.draw.rect(win, self.rgb, self.rect)
+
+    def move(self):
+        pass
+
+
 
 
 class Projectile(Entity):
