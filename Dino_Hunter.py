@@ -207,14 +207,13 @@ class ControlManager(object):
         self.screen.blit(self.background, (0,0))
 
         # Update camera
-        self.player.update(self.dt)
+        self.player.animate(self.dt)
         self.player.draw(self.screen, self.player)
         self.camera.update(self.player)
 
         for entity in self.world:
             if not isinstance(entity, Player):
                 entity.move()
-                entity.update(self.dt)
                 entity.draw(self.screen, self.camera.apply(entity))
 
         # Update the main display
@@ -240,9 +239,6 @@ class Entity(pygame.sprite.Sprite):
         self.rect = None
 
     def draw(self, **kwargs):
-        return NotImplemented
-
-    def update(self, **kwargs):
         return NotImplemented
 
     def move(self, **kwargs):
@@ -290,7 +286,7 @@ class Player(Entity):
         self.frame = next(self.frameCycle)
         self.rect = self.frame.get_rect()
 
-    def update(self, dt):
+    def animate(self, dt):
         self.timer += dt
         while self.timer >= self.frame_duration:
             self.timer -= self.frame_duration
@@ -380,9 +376,6 @@ class tRex(Entity):
             else:
                 self.vel = self.vel * -1
 
-    def update(self, dt):
-        pass
-
 
 
 class Projectile(Entity):
@@ -399,23 +392,17 @@ class Projectile(Entity):
     def draw(self, surface, target):
         pygame.draw.circle(surface, self.color, (self.x, self.y), self.radius)
 
-    def update(self, dt):
+    def move(self):
         if self.facing:
             self.x -= self.vel
         else:
             self.x += self.vel
-
-    def move(self):
-        return NotImplemented
 
 class BackgroundObjects(Entity):
     def __init__(self, health, x, y, width, height, vel):
         super().__init__(health, x, y, width, height, vel)
 
     def draw(self):
-        return NotImplemented
-
-    def update(self):
         return NotImplemented
 
     def move(self):
