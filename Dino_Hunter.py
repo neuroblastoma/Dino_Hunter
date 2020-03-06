@@ -135,7 +135,10 @@ class ControlManager(object):
                 # Number of supported bullets on screen
                 if len(self.bullets) < 15:
                     # Adds bullet to bullets sprite group
-                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2), round(self.player.y + 55 + self.player.height // 4), 2, color=(0,0,0), facing=self.player.left_facing, velocity=int(50)))
+                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2),
+                                                round(self.player.y + 55 + self.player.height // 4), 2,
+                                                color=(255, 255, 255), facing=self.player.left_facing,
+                                                velocity=int(50)))
 
                 self.world.add(self.bullets)
 
@@ -149,20 +152,32 @@ class ControlManager(object):
             #             self.player.kill()
             #             # TODO: Game over screen...
 
-            elif self.bullets:
+            if self.bullets:
                 for bullet in self.bullets:
-                    print(bullet.x)
+                    # print(bullet.x)
+                    pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True)
+                    print("COLLISION:", pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True))
+
                     if bullet.x > self.screenWidth or bullet.x < 0:
                         self.bullets.remove(bullet)
                         self.world.remove(bullet)
 
-                    if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
-                        #TODO: Remove enemies and bullets from respective trackers and self.world
-                        continue
+                    # pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True)
+                    # if pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True):
+                    #     #TODO: Remove enemies and bullets from respective trackers and self.world
+                    #     self.bullets.remove(bullet)
+                    #     self.world.remove(bullet)
+                    #
+                    #     print("BULLET COLLISION!")
+
+                # bullet collision detection
+
+
             else:
                 # TODO: Display success and move to next level
                 pass
 
+            print("World",self.world)
 
             # TODO: Should really consider scenes... Ugh. Why so complicated?
 
@@ -483,6 +498,8 @@ class Projectile(Entity):
             self.x -= self.vel
         else:
             self.x += self.vel
+
+        self.rect = pygame.Rect(self.x, self.y, self.radius*2, self.radius*2)
 
 class BackgroundObjects(Entity):
     def __init__(self, health, x, y, width, height, vel):
