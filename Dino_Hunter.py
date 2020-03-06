@@ -90,15 +90,15 @@ class ControlManager(object):
 
     def create_enemies(self):
         # TODO: different amount/types depending on level?
-        # TODO: THIS IS A TEST
-        tRex1 = tRex(self.screenWidth, self.screenHeight)
-        self.enemies.add(tRex1)
+        # TODO: For level 1
+        for i in range(2):
+            self.enemies.add(tRex(self.screenWidth, self.screenHeight))
 
-        raptor1 = raptor(self.screenWidth, self.screenHeight)
-        self.enemies.add(raptor1)
+        for i in range(5):
+            self.enemies.add(raptor(self.screenWidth, self.screenHeight))
 
-        ptero1 = ptero(self.screenWidth, self.screenHeight)
-        self.enemies.add(ptero1)
+        for i in range(3):
+            self.enemies.add(ptero(self.screenWidth, self.screenHeight))
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -158,9 +158,19 @@ class ControlManager(object):
 
             if self.bullets:
                 for bullet in self.bullets:
-                    # print(bullet.x)
-                    pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True)
-                    print("COLLISION:", pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True))
+                    # bullet collision detection
+                    collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
+                    if collision:
+                        self.score += 1
+                        collision[0].health -= 1
+                        print(collision[0], "health =", collision[0].health)
+                        if collision[0].health <= 0:
+                            collision[0].kill()
+
+
+                        self.bullets.remove(bullet)
+                        self.world.remove(bullet)
+
 
                     if bullet.x > self.screenWidth or bullet.x < 0:
                         self.bullets.remove(bullet)
@@ -174,14 +184,11 @@ class ControlManager(object):
                     #
                     #     print("BULLET COLLISION!")
 
-                # bullet collision detection
 
 
             else:
                 # TODO: Display success and move to next level
                 pass
-
-            print("World",self.world)
 
             # TODO: Should really consider scenes... Ugh. Why so complicated?
 
