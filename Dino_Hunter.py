@@ -137,13 +137,18 @@ class ControlManager(object):
             self.player.move(verticalDirection, horizontalDirection)
 
             # Player-enemy collision detection:
-            if pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False):
+            pe_collision = pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False)
+            if pe_collision:
+                pe_collision[0].health -= 1
                 self.player.health -= 1
-                print("Player heatlh =", self.player.health)
-                if self.player.health <= 0:
+                print("Player health =", self.player.health)
+                print(pe_collision,"health:", pe_collision[0].health)
+                if self.player.health <= 0: # TODO: Explosion or flashing or something? Respawn?
                     self.player.lives -= 1
                     self.player.health = 100
-                # TODO: Explosion or flashing or something?
+
+                if pe_collision[0].health <= 0:
+                    pe_collision[0].kill()
 
                 if self.player.lives <= 0:
                     self.player.kill()
@@ -259,6 +264,12 @@ class ControlManager(object):
         text2 = font2.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
         self.screen.blit(text2, (650, 10))
         # Update the main display
+
+
+        # Draw Player Health
+        font3 = pygame.font.SysFont('comicsans', 25, True)
+        health_txt = font3.render("Player Health: " + str(self.player.health), 1, (0, 255, 0))
+        self.screen.blit(health_txt, (25, 25))
         pygame.display.update()
 
 
@@ -347,6 +358,9 @@ class Player(Entity):
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), target)
 
+        pygame.draw.rect(surface, (255, 0, 0), (35, 5, 100, 20))
+        pygame.draw.rect(surface, (0, 255, 0), (35, 5, 100 - ((100 / 100) * (100 - self.health)), 20))
+
     def move(self, vdir, hdir):
         """Moves player based on keyboard input and tracks facing direct. Movement is not instantaneous.
             The following cases apply to horizontal player movement
@@ -407,6 +421,8 @@ class tRex(Entity):
     def draw(self, win, R):
         self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
+        pygame.draw.rect(win, (255, 0, 0), (self.x - 9, self.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.x - 9, self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
@@ -435,6 +451,8 @@ class raptor(Entity):
     def draw(self, win, R):
         self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
+        pygame.draw.rect(win, (255, 0, 0), (self.x - 15, self.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.x - 15, self.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
@@ -453,7 +471,7 @@ class raptor(Entity):
 
 class ptero(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=5, x=random.randrange(screenWidth - 120, screenWidth - 61),
+        super().__init__(health=10, x=random.randrange(screenWidth - 120, screenWidth - 61),
                          y=random.randrange(60, screenHeight - 60), width=15, height=15,
                          vel=random.uniform(2, 3))
         self.rgb = (255, 255, 0)
@@ -472,6 +490,8 @@ class ptero(Entity):
     def draw(self, win, r):
         self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
+        pygame.draw.rect(win, (255, 0, 0), (self.x - 15, self.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.x - 15, self.y - 15, 50 - ((50/10) * (10 - self.health)), 10))
 
     def move(self):
         # x-based movements
