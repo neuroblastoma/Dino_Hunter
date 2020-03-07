@@ -127,7 +127,6 @@ class ControlManager(object):
                 3. Redraw the graphics for the world
                 4. Call pygame.display.update to update graphics on screen.
         """
-        level = 0
         while self.run:
             # check events
             for event in pygame.event.get():
@@ -156,6 +155,9 @@ class ControlManager(object):
                 print(pe_collision,"health:", pe_collision[0].health)
                 if self.player.health <= 0: # TODO: Explosion or flashing or something? Respawn?
                     self.player.lives -= 1
+                    self.player.x = 100
+                    self.player.y = 100
+                    self.player.gun_str = 1
                     self.player.health = 100
 
                 if pe_collision[0].health <= 0:
@@ -168,7 +170,7 @@ class ControlManager(object):
             # Projectile spawn
             if firing:
                 # Number of supported bullets on screen
-                if len(self.bullets) < 5:
+                if len(self.bullets) < 5 + self.current_level:
                     # Adds bullet to bullets sprite group
                     self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2),
                                                 round(self.player.y + 55 + self.player.height // 4), 2,
@@ -182,7 +184,7 @@ class ControlManager(object):
                     collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
                     if collision:
                         self.score += 1
-                        collision[0].health -= 1
+                        collision[0].health -= (self.player.gun_str)
                         print(collision[0], "health =", collision[0].health)
                         if collision[0].health <= 0:
                             collision[0].kill()
@@ -209,6 +211,9 @@ class ControlManager(object):
                     print("counter =",counter)
                     pygame.display.update()
                     self.redrawGameWindow()
+                self.player.x = 100
+                self.player.y = 100
+                self.player.gun_str += 1
                 self.create_enemies()
                 for e in self.enemies:
                     self.world.add(e)
@@ -221,7 +226,7 @@ class ControlManager(object):
 
             # Check to see if player is out of lives?
             if self.player.lives <= 0 or self.keyState[pygame.K_ESCAPE]:
-                self.run = False
+                self.run = False #TODO: Game over screen?
 
     def parse_keyState(self):
         '''Parses pressed keys'''
@@ -271,20 +276,26 @@ class ControlManager(object):
                 entity.draw(self.screen, self.camera.apply(entity))
 
         # Draw Player scoreboard
-        font = pygame.font.SysFont('comicsans', 45, True)
-        text = font.render('Score: ' + str(self.score), 1, (0, 0, 0))
+        font1 = pygame.font.SysFont('comicsans', 45, True)
+        text = font1.render('Score: ' + str(self.score), 1, (0, 0, 0))
         self.screen.blit(text, (390, 10))
 
-        # Draw Player lives tracker
-        font2 = pygame.font.SysFont('comicsans', 45, True)
-        text2 = font2.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
-        self.screen.blit(text2, (650, 10))
-        # Update the main display
+        # Draw Player level and lives tracker
+        text2 = font1.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
+        self.screen.blit(text2, (600, 10))
+        lvl_txt = font1.render("Level: " + str(self.current_level), 1, (0,0,0))
+        self.screen.blit(lvl_txt, (650, 30))
 
         # Draw Player Health
-        font3 = pygame.font.SysFont('comicsans', 25, True)
-        health_txt = font3.render("Player Health: " + str(self.player.health), 1, (0, 255, 0))
+        font2 = pygame.font.SysFont('comicsans', 25, True)
+        health_txt = font2.render("Player Health: " + str(self.player.health), 1, (0, 255, 0))
         self.screen.blit(health_txt, (25, 25))
+
+        # Draw projectile detail
+        gun_str = font1.render("Gun Strength: " + str(self.player.gun_str), 1, (0, 0, 0))
+        self.screen.blit(gun_str, (1000, 10))
+
+        # Update the main display
         pygame.display.update()
 
 
@@ -323,6 +334,8 @@ class Player(Entity):
     def __init__(self):
         # TODO: Player should enter screen from top, right
         super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
+
+        self.gun_str = 1
 
         # TODO: Sounds
         self.lives = 3
