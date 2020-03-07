@@ -163,9 +163,22 @@ class ControlManager(object):
                 if pe_collision[0].health <= 0:
                     pe_collision[0].kill()
 
-                if self.player.lives <= 0:
+                if self.player.lives <= 0: # TODO: Game over screen...
                     self.player.kill()
-                    # TODO: Game over screen...
+                    counter = 500
+                    while counter > 0:
+                        GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
+                        self.screen.blit(GO_txt, (375, 300))
+                        score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255,0))
+                        self.screen.blit(score_txt, (375, 400))
+                        counter -= 1
+                        print("Counter =", counter)
+                        pygame.display.update()
+                        self.redrawGameWindow()
+
+                    self.run = False
+
+
 
             # Projectile spawn
             if firing:
@@ -225,7 +238,7 @@ class ControlManager(object):
             self.redrawGameWindow()
 
             # Check to see if player is out of lives?
-            if self.player.lives <= 0 or self.keyState[pygame.K_ESCAPE]:
+            if self.keyState[pygame.K_ESCAPE]:
                 self.run = False #TODO: Game over screen?
 
     def parse_keyState(self):
@@ -470,7 +483,7 @@ class tRex(Entity):
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
         super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=screenHeight - 15, width=15, height=15,
-                         vel=random.uniform(4, 6))
+                         vel=random.uniform(3, 5))
         self.rgb = (255, 165, 0)
         self.end = screenWidth - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
