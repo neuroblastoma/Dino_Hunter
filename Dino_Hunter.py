@@ -164,7 +164,6 @@ class ControlManager(object):
                     pe_collision[0].kill()
 
                 if self.player.lives <= 0: # TODO: Game over screen...
-                    self.player.kill()
                     counter = 500
                     while counter > 0:
                         GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
@@ -176,6 +175,7 @@ class ControlManager(object):
                         pygame.display.update()
                         self.redrawGameWindow()
 
+                    self.player.kill()
                     self.run = False
 
 
