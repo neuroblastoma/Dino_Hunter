@@ -218,7 +218,7 @@ class ControlManager(object):
                 while counter > 0:
                     # Draw Level Complete
                     font = pygame.font.SysFont('comicsans', 100, True)
-                    level_txt = font.render("LEVEL COMPLETE!" + str(counter), 1, (0, 255, 0))
+                    level_txt = font.render("LEVEL COMPLETE! " + str(counter), 1, (0, 255, 0))
                     self.screen.blit(level_txt, (375, 300))
                     counter -= 1
                     print("counter =",counter)
@@ -297,7 +297,7 @@ class ControlManager(object):
         text2 = font1.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
         self.screen.blit(text2, (600, 10))
         lvl_txt = font1.render("Level: " + str(self.current_level), 1, (0,0,0))
-        self.screen.blit(lvl_txt, (650, 30))
+        self.screen.blit(lvl_txt, (650, 50))
 
         # Draw Player Health
         font2 = pygame.font.SysFont('comicsans', 25, True)
