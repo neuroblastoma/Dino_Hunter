@@ -26,13 +26,16 @@ class Camera(object):
         self.width = width
         self.height = height
         self.offsetState = pygame.Rect(0, 0, self.width, self.height)
+        self.offset = 0
         self.cameraFunc = cameraFunc
 
     def apply(self, target):
+        print(target.rect)
         return target.rect.move(self.offsetState.topleft)
 
     def update(self, target):
-        self.offsetState = self.cameraFunc(self.offsetState, target.rect, self.width, self.height)
+        '''Updates the camera coordinates to match targets. Centers screen on target'''
+        self.offsetState = self.cameraFunc(self.offsetState, self.offset, target, self.width, self.height)
 
 class ControlManager(object):
     """Class for tracking game states & managing event loop
@@ -62,7 +65,7 @@ class ControlManager(object):
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.simple_camera, self.screenWidth, self.screenHeight)
+        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
         self.dt = None
         self.keyState = None
         self.run = True
@@ -132,6 +135,7 @@ class ControlManager(object):
             horizontalDirection, verticalDirection, firing = self.parse_keyState()
 
             # Movement
+            self.camera.offset = self.player.rect.x
             self.player.move(verticalDirection, horizontalDirection)
 
             # Projectile spawn
@@ -181,9 +185,7 @@ class ControlManager(object):
                 # TODO: Display success and move to next level
                 pass
 
-            print("World",self.world)
-
-            # TODO: Should really consider scenes... Ugh. Why so complicated?
+            #print("World",self.world)
 
             # Insert music here
 
@@ -235,6 +237,8 @@ class ControlManager(object):
         self.player.animate(self.dt)
         self.player.draw(self.screen, self.player)
         self.camera.update(self.player)
+
+        print(self.camera.offset)
 
         for entity in self.world:
             if not isinstance(entity, Player):

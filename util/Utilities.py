@@ -15,7 +15,7 @@ class SpriteSheet(object):
         try:
             self.sheet = pygame.image.load(filename).convert()
         except pygame.error as e:
-            print('Unable to load spritesheet image: ' + filename)
+            # print('Unable to load spritesheet image: ' + filename)
             raise SystemExit(e)
 
         # Sticking with rows/cols for simplicity
@@ -49,27 +49,14 @@ class SpriteSheet(object):
 
         return retSurfaces
 
-
-def simple_camera(camera, rect, screenWidth, screenHeight):
-    left, top, _, _ = rect
-    _, _, width, height = camera
-
-    return pygame.Rect(-left + (screenWidth / 2), -top + (screenHeight / 2), width, height)
-
-
-def complex_camera(camera, entity, screenWidth, screenHeight):
+def complex_camera(camera_rect, offset, entity, screenWidth, screenHeight):
     """Tracks the position of the given entity and locks screen to their x position"""
-    # Center on entity
-    x = -entity.rect.center[0] + screenWidth / 2
-    #y = -entity.rect.center[1] + screenHeight / 2
+    # Offset = -(new x - old x)
+    x = -(entity.rect.x - offset)
 
     # Move the camera
-    camera.topleft += (pygame.Vector2((x, entity.y)) - pygame.Vector2(camera.topleft))  # * 0.06
-    print(camera.topleft)
+    camera_rect.topleft += (pygame.Vector2((x, entity.y)) - pygame.Vector2(camera_rect.topleft))  # * 0.06
 
-    # if camera.topleft[0] > 1000:
-    #     camera.topleft = (0, entity.y)
-    # elif camera.topleft[0] < -500:
-    #     camera.topleft = (1000, entity.y)
+    print(camera_rect.topleft)
 
-    return camera
+    return camera_rect
