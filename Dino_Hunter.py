@@ -26,14 +26,33 @@ class Camera(object):
     def __init__(self, cameraFunc, width, height):
         self.width = width
         self.height = height
-        self.offsetState = pygame.Rect(0, 0, self.width, self.height)
+        # TODO: Link with player start location
+        self.offsetState = pygame.Rect(self.width / 2, 1000, self.width, self.height)
         self.cameraFunc = cameraFunc
 
     def apply(self, target):
-        return target.rect.move(self.offsetState.topleft)
+        """Apply camera offset to target"""
+        # Bind x coordinate
+        dx = target.rect.x + self.offsetState.x
+        dx = dx % self.width
+
+        # Bind y coordinate
+        if 0 <= target.y <= self.height - target.rect.height:
+            target.y = target.y
+        elif target.y > self.height - target.rect.height:
+            target.y = self.height - target.rect.height
+        else:
+            target.y = 0
+
+        target.rect = pygame.Rect(dx, target.y, target.height, target.width)
+
+        return target.rect
 
     def update(self, target):
-        self.offsetState = self.cameraFunc(self.offsetState, target.rect, self.width, self.height)
+        '''Updates the camera coordinates to match targets. Centers screen on target'''
+        self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
+        # target.rect = self.offsetState
+
 
 
 class ControlManager(object):
@@ -60,12 +79,11 @@ class ControlManager(object):
         self.level_rect = self.level.get_rect()
 
         # TODO: How do we handle level transitions?
-        self.background = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
-        self.background = pygame.transform.scale(self.background, (self.screenWidth, self.screenHeight))
+        self.bg = Background(width=self.screenWidth, height=screenHeight)
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.simple_camera, self.screenWidth, self.screenHeight)
+        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
         self.dt = None
         self.keyState = None
         self.run = True
@@ -77,7 +95,7 @@ class ControlManager(object):
         self.bullets = pygame.sprite.Group()
 
         # Sprite initialization
-        self.player = Player()
+        self.player = Player(x=self.screenWidth / 2)
         self.create_enemies()
 
         # Add sprites to "global" tracker
@@ -146,6 +164,7 @@ class ControlManager(object):
             # Movement
             self.player.move(verticalDirection, horizontalDirection)
 
+
             # Player-enemy collision detection:
             pe_collision = pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False)
             if pe_collision:
@@ -179,13 +198,18 @@ class ControlManager(object):
                     self.run = False
 
 
+            # Update camera
+            self.player.animate(self.dt)
+            self.camera.update(self.player)
+
 
             # Projectile spawn
             if firing:
                 # Number of supported bullets on screen
                 if len(self.bullets) < 5 + self.current_level:
                     # Adds bullet to bullets sprite group
-                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2),
+                    # TODO TEST TEST TEST self.player => self.camera
+                    self.bullets.add(Projectile(round(self.screenWidth // 2 + 20 + self.player.width // 2),
                                                 round(self.player.y + 55 + self.player.height // 4), 2,
                                                 color=(255, 255, 255), facing=self.player.left_facing,
                                                 velocity=int(50)))
@@ -201,6 +225,7 @@ class ControlManager(object):
                         print(collision[0], "health =", collision[0].health)
                         if collision[0].health <= 0:
                             collision[0].kill()
+
 
                         self.bullets.remove(bullet)
                         self.world.remove(bullet)
@@ -231,7 +256,6 @@ class ControlManager(object):
                 for e in self.enemies:
                     self.world.add(e)
 
-            # TODO: Should really consider scenes... Ugh. Why so complicated?
 
             # Insert music here
 
@@ -275,22 +299,26 @@ class ControlManager(object):
         # Clear screen
         self.screen.fill(black)
 
-        # Draw background
-        self.screen.blit(self.background, (0, 0))
+        # Update background
+        self.bg.move(self.camera.offsetState.x)
+        self.bg.draw(self.screen)
 
-        # Update camera
-        self.player.animate(self.dt)
-        self.player.draw(self.screen, self.player)
-        self.camera.update(self.player)
 
+        # Move select entities and draw everything to screen
         for entity in self.world:
             if not isinstance(entity, Player):
                 entity.move()
+            if not isinstance(entity, Projectile):
                 entity.draw(self.screen, self.camera.apply(entity))
+            else:
+                entity.draw(self.screen, entity)
+
+
 
         # Draw Player scoreboard
         font1 = pygame.font.SysFont('comicsans', 45, True)
         text = font1.render('Score: ' + str(self.score), 1, (0, 0, 0))
+
         self.screen.blit(text, (390, 10))
 
         # Draw Player level and lives tracker
@@ -344,9 +372,9 @@ class Player(Entity):
 
     # Starting position(1380, 50)
     # y collision with ground = 575?
-    def __init__(self):
+    def __init__(self, x):
         # TODO: Player should enter screen from top, right
-        super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
+        super().__init__(health=100, x=x, y=100, width=5, height=5, vel=0)
 
         self.gun_str = 1
 
@@ -356,7 +384,7 @@ class Player(Entity):
         # Speed related ##################################################################
         # TODO: This should be both vertical and horizontal speed
         self.max_speed = 7
-        self.max_lift = 3  # 5 pixels/sec
+        self.max_lift = 6  # 5 pixels/sec
         self.lift_speed = 0
 
         # Determines facing direction
@@ -392,8 +420,6 @@ class Player(Entity):
         """Blit the player to the window"""
 
         # TODO: Add animation that triggers when facing changes
-        # TODO: Remember: target was self.rect
-
         if self.left_facing:
             surface.blit(self.frame, target)
         else:
@@ -438,7 +464,7 @@ class Player(Entity):
         # Incremental vertical speed
         if vdir < 0 or vdir > 0:
             if self.lift_speed < self.max_lift:
-                self.lift_speed += 0.25
+                self.lift_speed += 0.45
             else:
                 self.lift_speed = self.max_lift
 
@@ -460,10 +486,10 @@ class tRex(Entity):
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, R):
-        self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
         pygame.draw.rect(win, (255, 0, 0), (self.x - 9, self.y - 15, 50, 10))
         pygame.draw.rect(win, (0, 255, 0), (self.x - 9, self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
+
 
     def move(self):
         if self.vel > 0:
@@ -484,13 +510,13 @@ class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
         super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=screenHeight - 15, width=15, height=15,
                          vel=random.uniform(3, 5))
+
         self.rgb = (255, 165, 0)
         self.end = screenWidth - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, R):
-        self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
         pygame.draw.rect(win, (255, 0, 0), (self.x - 15, self.y - 15, 50, 10))
         pygame.draw.rect(win, (0, 255, 0), (self.x - 15, self.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
@@ -529,7 +555,6 @@ class ptero(Entity):
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, r):
-        self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
         pygame.draw.rect(win, (255, 0, 0), (self.x - 15, self.y - 15, 50, 10))
         pygame.draw.rect(win, (0, 255, 0), (self.x - 15, self.y - 15, 50 - ((50/10) * (10 - self.health)), 10))
@@ -585,15 +610,32 @@ class Projectile(Entity):
         self.rect = pygame.Rect(self.x, self.y, self.radius * 2, self.radius * 2)
 
 
-class BackgroundObjects(Entity):
-    def __init__(self, health, x, y, width, height, vel):
-        super().__init__(health, x, y, width, height, vel)
+class Background():
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.mid_bg = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
+        self.mid_bg = pygame.transform.scale(self.mid_bg, (self.width, self.height))
+        self.mid_rect = self.mid_bg.get_rect()
 
-    def draw(self):
-        return NotImplemented
+    def draw(self, surface):
+        surface.blit(self.mid_bg, self.mid_rect)
+        surface.blit(self.mid_bg, self.mid_rect.move(self.mid_rect.width, 0))
+        surface.blit(self.mid_bg, self.mid_rect.move(-self.mid_rect.width, 0))
 
-    def move(self):
-        return NotImplemented
+    def move(self, offset):
+        # Bind x coordinate between 0 and screenWidth
+        if self.mid_rect.left >= self.width:
+            self.mid_rect.x = 0
+        elif self.mid_rect.right <= 0:
+            self.mid_rect.x = 0
+
+        dx = -(self.mid_rect.x - offset)
+        self.mid_rect.move_ip(dx, 0)
+
+        print(self.mid_rect.x, dx)
+
+
 
 
 # MAIN ##################
@@ -602,14 +644,11 @@ def main():
     pygame.init()
 
     # SETTINGS #######################################################
-    # screenWidth = 1500
-    # screenHeight = 750
+    screenWidth = 1500
+    screenHeight = 750
 
     # Instantiation ##################################################
-    game = ControlManager(caption="Dino Hunter")
-
-    # Something, something containers?
-    # TODO: containers may be the same as the world list below... more research needed
+    game = ControlManager(caption="Dino Hunter", screenWidth=screenWidth, screenHeight=screenHeight)
 
     # GAME LOOP ######################################################
     game.main_loop()
