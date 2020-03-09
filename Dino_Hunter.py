@@ -14,6 +14,7 @@
 
 import pygame
 import os
+import math
 from itertools import cycle
 from util import Utilities
 import random
@@ -51,7 +52,6 @@ class Camera(object):
     def update(self, target):
         '''Updates the camera coordinates to match targets. Centers screen on target'''
         self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
-
 
 
 class ControlManager(object):
@@ -128,7 +128,6 @@ class ControlManager(object):
             for i in range(base[2] * self.current_level):
                 self.enemies.add(ptero(self.screenWidth, self.screenHeight))
 
-
     def make_text(self, message):
         """Renders text object to the screen"""
         font = pygame.font.Font(None, 100)
@@ -159,6 +158,58 @@ class ControlManager(object):
 
             horizontalDirection, verticalDirection, firing = self.parse_keyState()
 
+
+            # Player-enemy collision detection:
+            pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False,
+                                                       collided=pygame.sprite.Rect.colliderect)
+            if pe_collision:
+                pe_collision[0].health -= 1
+                self.player.health -= 1
+                print("Player health =", self.player.health)
+                print(pe_collision, "health:", pe_collision[0].health)
+                if self.player.health <= 0:  # TODO: Explosion or flashing or something? Respawn?
+                    self.player.lives -= 1
+                    self.player.x = 100
+                    self.player.y = 100
+                    self.player.gun_str = 1
+                    self.player.health = 100
+
+                if pe_collision[0].health <= 0:
+                    pe_collision[0].kill()
+
+                if self.player.lives <= 0:  # TODO: Game over screen...
+                    counter = 500
+                    while counter > 0:
+                        GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
+                        self.screen.blit(GO_txt, (375, 300))
+                        score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
+                        self.screen.blit(score_txt, (375, 400))
+                        counter -= 1
+                        print("Counter =", counter)
+                        pygame.display.update()
+                        self.redrawGameWindow()
+
+                    self.player.kill()
+                    self.run = False
+
+            if self.bullets:
+                for bullet in self.bullets:
+                    # bullet collision detection
+                    collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
+                    if collision:
+                        self.score += 1
+                        collision[0].health -= (self.player.gun_str)
+                        print(collision[0], "health =", collision[0].health)
+                        if collision[0].health <= 0:
+                            collision[0].kill()
+
+                        self.bullets.remove(bullet)
+                        self.world.remove(bullet)
+
+                    if bullet.rect.x > self.screenWidth or bullet.rect.x < 0:
+                        self.bullets.remove(bullet)
+                        self.world.remove(bullet)
+
             # Movement
             self.player.vdir = verticalDirection
             self.player.hdir = horizontalDirection
@@ -172,9 +223,7 @@ class ControlManager(object):
             self.player.animate(self.dt)
             self.camera.update(self.player)
 
-            if self.enemies:
-                pass
-            else:
+            if not self.enemies:
                 # TODO: Display success and move to next level
                 counter = 100
                 while counter > 0:
@@ -240,6 +289,17 @@ class ControlManager(object):
         self.bg.move(self.camera.offsetState.x)
         self.bg.draw(self.screen)
 
+        # Projectile spawn
+        if self.player.firing:
+            # Number of supported bullets on screen
+            if len(self.bullets) < 50 + self.current_level:
+                # Adds bullet to bullets sprite group
+                self.bullets.add(Projectile(round(self.screenWidth // 2),
+                                            round(self.player.rect.center[1] + self.player.height // 4), 2,
+                                            color=(255, 255, 255), facing=self.player.left_facing,
+                                            velocity=int(3)))
+            self.world.add(self.bullets)
+
         # Move select entities and draw everything to screen
         for entity in self.world:
             if not isinstance(entity, Player):
@@ -248,75 +308,6 @@ class ControlManager(object):
                 entity.draw(self.screen, self.camera.apply(entity))
             else:
                 entity.draw(self.screen, entity)
-
-        for e in self.enemies:
-            if isinstance(e, tRex):
-                print("tRex: {}".format(e.rect))
-        print("Player: {}".format(self.player.rect))
-
-        # Player-enemy collision detection:
-        pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False, collided=pygame.sprite.Rect.colliderect)
-        print(pe_collision)
-        if pe_collision:
-            pe_collision[0].health -= 1
-            self.player.health -= 1
-            print("Player health =", self.player.health)
-            print(pe_collision, "health:", pe_collision[0].health)
-            if self.player.health <= 0:  # TODO: Explosion or flashing or something? Respawn?
-                self.player.lives -= 1
-                self.player.x = 100
-                self.player.y = 100
-                self.player.gun_str = 1
-                self.player.health = 100
-
-            if pe_collision[0].health <= 0:
-                pe_collision[0].kill()
-
-            if self.player.lives <= 0:  # TODO: Game over screen...
-                counter = 500
-                while counter > 0:
-                    GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
-                    self.screen.blit(GO_txt, (375, 300))
-                    score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
-                    self.screen.blit(score_txt, (375, 400))
-                    counter -= 1
-                    print("Counter =", counter)
-                    pygame.display.update()
-                    self.redrawGameWindow()
-
-                self.player.kill()
-                self.run = False
-
-        # Projectile spawn
-        if self.player.firing:
-            # Number of supported bullets on screen
-            if len(self.bullets) < 5 + self.current_level:
-                # Adds bullet to bullets sprite group
-                # TODO TEST TEST TEST self.player => self.camera
-                self.bullets.add(Projectile(round(self.screenWidth // 2 + 20 + self.player.width // 2),
-                                            round(self.player.y + 55 + self.player.height // 4), 2,
-                                            color=(255, 255, 255), facing=self.player.left_facing,
-                                            velocity=int(50)))
-            self.world.add(self.bullets)
-
-        if self.bullets:
-            for bullet in self.bullets:
-                # bullet collision detection
-                collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
-                if collision:
-                    self.score += 1
-                    collision[0].health -= (self.player.gun_str)
-                    print(collision[0], "health =", collision[0].health)
-                    if collision[0].health <= 0:
-                        collision[0].kill()
-
-                    self.bullets.remove(bullet)
-                    self.world.remove(bullet)
-
-                if bullet.x > self.screenWidth or bullet.x < 0:
-                    self.bullets.remove(bullet)
-                    self.world.remove(bullet)
-
 
         # Draw Player scoreboard
         font1 = pygame.font.SysFont('comicsans', 45, True)
@@ -422,11 +413,13 @@ class Player(Entity):
 
     def draw(self, surface, target):
         """Blit the player to the window"""
+
         # TODO: Add animation that triggers when facing changes
         if self.left_facing:
             surface.blit(self.frame, target)
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), target)
+
         # Health bar at in top left
         pygame.draw.rect(surface, (255, 0, 0), (25, 5, 200, 20))
         pygame.draw.rect(surface, (0, 255, 0), (25, 5, 200 - ((200 / 100) * (100 - self.health)), 20))
@@ -474,7 +467,7 @@ class Player(Entity):
         self.y += (self.vdir * self.lift_speed)
 
         # Update self.rectangle with new coords
-        self.rect = pygame.Rect(self.x, self.y, 90, 70)
+        self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
 
 class tRex(Entity):
@@ -505,6 +498,7 @@ class tRex(Entity):
 
         self.rect = pygame.Rect(self.x, self.y, 30, 30)
 
+
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
         super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=random.randrange(screenHeight - 60, screenHeight - 40), width=15, height=15,
@@ -516,9 +510,9 @@ class raptor(Entity):
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, R):
-        pygame.draw.rect(win, self.rgb, self.rect)
-        pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 15, self.y - 15, 50, 10))
-        pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 15, self.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
+        pygame.draw.rect(win, self.rgb, R)
+        pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 15, self.rect.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 15, self.rect.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
@@ -597,16 +591,30 @@ class Projectile(Entity):
         self.rect = pygame.Rect(self.x - radius, self.y - radius, radius * 2, radius * 2)
         self.facing = facing
 
+        # VECTOR MATH!
+        self.offset = pygame.math.Vector2(40, 0).rotate(math.radians(45))
+
+        # Change this based on facing
+        if not self.facing:
+            self.v = pygame.math.Vector2(-self.vel, -2).rotate(0) * 9
+            self.pos = pygame.math.Vector2(self.rect.x - 30, self.rect.y) + self.offset
+        else:
+            self.v = pygame.math.Vector2(self.vel, -2).rotate(0) * 9
+            self.pos = pygame.math.Vector2(self.rect.x - 20, self.rect.y) + self.offset
+
     def draw(self, surface, target):
         pygame.draw.circle(surface, self.color, self.rect.center, self.radius)
 
     def move(self):
         if self.facing:
-            self.x -= self.vel
+            #self.x -= self.vel
+            self.pos -= self.v
         else:
-            self.x += self.vel
+            #self.x += self.vel
+            self.pos -= self.v
 
-        self.rect = pygame.Rect(self.x, self.y, self.radius * 2, self.radius * 2)
+        #self.rect = pygame.Rect(self.x, self.y, self.radius * 2, self.radius * 2)
+        self.rect.center = self.pos
 
 
 class Background():
@@ -631,8 +639,6 @@ class Background():
 
         dx = -(self.mid_rect.x - offset)
         self.mid_rect.move_ip(dx, 0)
-
-
 
 
 # MAIN ##################
