@@ -51,6 +51,7 @@ class SpriteSheet(object):
 
 def complex_camera(camera_rect, entity, screenWidth, screenHeight):
     """Tracks the position of the given entity and locks screen to their x position"""
+
     # Create x,y based on entity's position
     x = -entity.rect.center[0] + screenWidth/2
     y = entity.rect.y

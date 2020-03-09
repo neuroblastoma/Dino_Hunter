@@ -44,14 +44,13 @@ class Camera(object):
         else:
             target.y = 0
 
-        target.rect = pygame.Rect(dx, target.y, target.height, target.width)
+        target.rect = pygame.Rect(dx, target.y, target.rect.height, target.rect.width)
 
         return target.rect
 
     def update(self, target):
         '''Updates the camera coordinates to match targets. Centers screen on target'''
         self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
-        # target.rect = self.offsetState
 
 
 
@@ -146,12 +145,11 @@ class ControlManager(object):
                 4. Call pygame.display.update to update graphics on screen.
         """
         while self.run:
-            # check events
+            # Check events
             for event in pygame.event.get():
                 # If user clicks red X, toggle run
                 if event.type == pygame.QUIT:
                     self.run = False
-                # elif event.type == pygame.ADDENEMY:
 
             # Update time delta
             self.dt = self.clock.tick(self.fps)
@@ -162,78 +160,17 @@ class ControlManager(object):
             horizontalDirection, verticalDirection, firing = self.parse_keyState()
 
             # Movement
-            self.player.move(verticalDirection, horizontalDirection)
+            self.player.vdir = verticalDirection
+            self.player.hdir = horizontalDirection
+            self.player.firing = firing
+            self.player.move()
 
-
-            # Player-enemy collision detection:
-            pe_collision = pygame.sprite.spritecollide(sprite=self.player, group=self.enemies, dokill=False)
-            if pe_collision:
-                pe_collision[0].health -= 1
-                self.player.health -= 1
-                print("Player health =", self.player.health)
-                print(pe_collision,"health:", pe_collision[0].health)
-                if self.player.health <= 0: # TODO: Explosion or flashing or something? Respawn?
-                    self.player.lives -= 1
-                    self.player.x = 100
-                    self.player.y = 100
-                    self.player.gun_str = 1
-                    self.player.health = 100
-
-                if pe_collision[0].health <= 0:
-                    pe_collision[0].kill()
-
-                if self.player.lives <= 0: # TODO: Game over screen...
-                    counter = 500
-                    while counter > 0:
-                        GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
-                        self.screen.blit(GO_txt, (375, 300))
-                        score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255,0))
-                        self.screen.blit(score_txt, (375, 400))
-                        counter -= 1
-                        print("Counter =", counter)
-                        pygame.display.update()
-                        self.redrawGameWindow()
-
-                    self.player.kill()
-                    self.run = False
-
+            # Clamp player's x coordinate:
+            self.player.x = self.player.x % self.screenWidth
 
             # Update camera
             self.player.animate(self.dt)
             self.camera.update(self.player)
-
-
-            # Projectile spawn
-            if firing:
-                # Number of supported bullets on screen
-                if len(self.bullets) < 5 + self.current_level:
-                    # Adds bullet to bullets sprite group
-                    # TODO TEST TEST TEST self.player => self.camera
-                    self.bullets.add(Projectile(round(self.screenWidth // 2 + 20 + self.player.width // 2),
-                                                round(self.player.y + 55 + self.player.height // 4), 2,
-                                                color=(255, 255, 255), facing=self.player.left_facing,
-                                                velocity=int(50)))
-                self.world.add(self.bullets)
-
-            if self.bullets:
-                for bullet in self.bullets:
-                    # bullet collision detection
-                    collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
-                    if collision:
-                        self.score += 1
-                        collision[0].health -= (self.player.gun_str)
-                        print(collision[0], "health =", collision[0].health)
-                        if collision[0].health <= 0:
-                            collision[0].kill()
-
-
-                        self.bullets.remove(bullet)
-                        self.world.remove(bullet)
-
-                    if bullet.x > self.screenWidth or bullet.x < 0:
-                        self.bullets.remove(bullet)
-                        self.world.remove(bullet)
-
 
             if self.enemies:
                 pass
@@ -303,7 +240,6 @@ class ControlManager(object):
         self.bg.move(self.camera.offsetState.x)
         self.bg.draw(self.screen)
 
-
         # Move select entities and draw everything to screen
         for entity in self.world:
             if not isinstance(entity, Player):
@@ -313,6 +249,73 @@ class ControlManager(object):
             else:
                 entity.draw(self.screen, entity)
 
+        for e in self.enemies:
+            if isinstance(e, tRex):
+                print("tRex: {}".format(e.rect))
+        print("Player: {}".format(self.player.rect))
+
+        # Player-enemy collision detection:
+        pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False, collided=pygame.sprite.Rect.colliderect)
+        print(pe_collision)
+        if pe_collision:
+            pe_collision[0].health -= 1
+            self.player.health -= 1
+            print("Player health =", self.player.health)
+            print(pe_collision, "health:", pe_collision[0].health)
+            if self.player.health <= 0:  # TODO: Explosion or flashing or something? Respawn?
+                self.player.lives -= 1
+                self.player.x = 100
+                self.player.y = 100
+                self.player.gun_str = 1
+                self.player.health = 100
+
+            if pe_collision[0].health <= 0:
+                pe_collision[0].kill()
+
+            if self.player.lives <= 0:  # TODO: Game over screen...
+                counter = 500
+                while counter > 0:
+                    GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
+                    self.screen.blit(GO_txt, (375, 300))
+                    score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
+                    self.screen.blit(score_txt, (375, 400))
+                    counter -= 1
+                    print("Counter =", counter)
+                    pygame.display.update()
+                    self.redrawGameWindow()
+
+                self.player.kill()
+                self.run = False
+
+        # Projectile spawn
+        if self.player.firing:
+            # Number of supported bullets on screen
+            if len(self.bullets) < 5 + self.current_level:
+                # Adds bullet to bullets sprite group
+                # TODO TEST TEST TEST self.player => self.camera
+                self.bullets.add(Projectile(round(self.screenWidth // 2 + 20 + self.player.width // 2),
+                                            round(self.player.y + 55 + self.player.height // 4), 2,
+                                            color=(255, 255, 255), facing=self.player.left_facing,
+                                            velocity=int(50)))
+            self.world.add(self.bullets)
+
+        if self.bullets:
+            for bullet in self.bullets:
+                # bullet collision detection
+                collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
+                if collision:
+                    self.score += 1
+                    collision[0].health -= (self.player.gun_str)
+                    print(collision[0], "health =", collision[0].health)
+                    if collision[0].health <= 0:
+                        collision[0].kill()
+
+                    self.bullets.remove(bullet)
+                    self.world.remove(bullet)
+
+                if bullet.x > self.screenWidth or bullet.x < 0:
+                    self.bullets.remove(bullet)
+                    self.world.remove(bullet)
 
 
         # Draw Player scoreboard
@@ -373,7 +376,6 @@ class Player(Entity):
     # Starting position(1380, 50)
     # y collision with ground = 575?
     def __init__(self, x):
-        # TODO: Player should enter screen from top, right
         super().__init__(health=100, x=x, y=100, width=5, height=5, vel=0)
 
         self.gun_str = 1
@@ -381,8 +383,11 @@ class Player(Entity):
         # TODO: Sounds
         self.lives = 3
         self.score = 0
+        self.vdir = 0
+        self.hdir = 0
+        self.firing = 0
+
         # Speed related ##################################################################
-        # TODO: This should be both vertical and horizontal speed
         self.max_speed = 7
         self.max_lift = 6  # 5 pixels/sec
         self.lift_speed = 0
@@ -396,7 +401,6 @@ class Player(Entity):
         self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1,
                                            columns=6)
 
-        # TODO: Need to do the proper math for frame_duration
         self.timer = 0
         self.frame_duration = 33
         # Creates iterable list of images/frames
@@ -418,30 +422,27 @@ class Player(Entity):
 
     def draw(self, surface, target):
         """Blit the player to the window"""
-
         # TODO: Add animation that triggers when facing changes
         if self.left_facing:
             surface.blit(self.frame, target)
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), target)
-
+        # Health bar at in top left
         pygame.draw.rect(surface, (255, 0, 0), (25, 5, 200, 20))
         pygame.draw.rect(surface, (0, 255, 0), (25, 5, 200 - ((200 / 100) * (100 - self.health)), 20))
 
-    def move(self, vdir, hdir):
+    def move(self):
         """Moves player based on keyboard input and tracks facing direct. Movement is not instantaneous.
             The following cases apply to horizontal player movement
                 1. If player is stationary, horizontal speed resets after slowing down
                 2. If player changes direction, horizontal speed is negated
                 3. If player continues in same direction, horizontal speed is increased until max
         """
-        # TODO: Need to bound this to the screen limits
-
         # Determine direction to face
         old_facing = self.left_facing
-        if hdir != 0:
-            self.left_facing = True if hdir == -1 else False
-            self.old_horizontalDirection = hdir
+        if self.hdir != 0:
+            self.left_facing = True if self.hdir == -1 else False
+            self.old_horizontalDirection = self.hdir
 
             # Case 3: Increase speed until max
             if self.vel < self.max_speed:
@@ -462,23 +463,23 @@ class Player(Entity):
             self.vel = self.vel * -0.75
 
         # Incremental vertical speed
-        if vdir < 0 or vdir > 0:
+        if self.vdir < 0 or self.vdir > 0:
             if self.lift_speed < self.max_lift:
                 self.lift_speed += 0.45
             else:
                 self.lift_speed = self.max_lift
 
         # Adjust (x,y)
-        self.x += (hdir * self.vel)
-        self.y += (vdir * self.lift_speed)
+        self.x += (self.hdir * self.vel)
+        self.y += (self.vdir * self.lift_speed)
 
         # Update self.rectangle with new coords
-        self.rect = pygame.Rect(self.x, self.y, 70, 90)
+        self.rect = pygame.Rect(self.x, self.y, 90, 70)
 
 
 class tRex(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=50, x=random.randrange(0, screenWidth - 121), y=screenHeight - 30, width=30, height=30,
+        super().__init__(health=50, x=random.randrange(0, screenWidth - 121), y=random.randrange(screenHeight - 60, screenHeight - 40), width=30, height=30,
                          vel=random.uniform(0.5, 1.0))
         self.rgb = (255, 0, 0)
         self.end = screenWidth - (self.width * random.randrange(2, 4))
@@ -487,9 +488,8 @@ class tRex(Entity):
 
     def draw(self, win, R):
         pygame.draw.rect(win, self.rgb, self.rect)
-        pygame.draw.rect(win, (255, 0, 0), (self.x - 9, self.y - 15, 50, 10))
-        pygame.draw.rect(win, (0, 255, 0), (self.x - 9, self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
-
+        pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 9, self.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 9, self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
@@ -505,10 +505,9 @@ class tRex(Entity):
 
         self.rect = pygame.Rect(self.x, self.y, 30, 30)
 
-
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=screenHeight - 15, width=15, height=15,
+        super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=random.randrange(screenHeight - 60, screenHeight - 40), width=15, height=15,
                          vel=random.uniform(3, 5))
 
         self.rgb = (255, 165, 0)
@@ -518,8 +517,8 @@ class raptor(Entity):
 
     def draw(self, win, R):
         pygame.draw.rect(win, self.rgb, self.rect)
-        pygame.draw.rect(win, (255, 0, 0), (self.x - 15, self.y - 15, 50, 10))
-        pygame.draw.rect(win, (0, 255, 0), (self.x - 15, self.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
+        pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 15, self.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 15, self.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
@@ -556,8 +555,8 @@ class ptero(Entity):
 
     def draw(self, win, r):
         pygame.draw.rect(win, self.rgb, self.rect)
-        pygame.draw.rect(win, (255, 0, 0), (self.x - 15, self.y - 15, 50, 10))
-        pygame.draw.rect(win, (0, 255, 0), (self.x - 15, self.y - 15, 50 - ((50/10) * (10 - self.health)), 10))
+        pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 15, self.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 15, self.y - 15, 50 - ((50/10) * (10 - self.health)), 10))
 
     def move(self):
         # x-based movements
@@ -599,7 +598,7 @@ class Projectile(Entity):
         self.facing = facing
 
     def draw(self, surface, target):
-        pygame.draw.circle(surface, self.color, (self.x, self.y), self.radius)
+        pygame.draw.circle(surface, self.color, self.rect.center, self.radius)
 
     def move(self):
         if self.facing:
@@ -632,8 +631,6 @@ class Background():
 
         dx = -(self.mid_rect.x - offset)
         self.mid_rect.move_ip(dx, 0)
-
-        print(self.mid_rect.x, dx)
 
 
 
