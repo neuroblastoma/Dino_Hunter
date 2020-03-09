@@ -22,28 +22,37 @@ import random
 # CLASSES ##################
 class Camera(object):
     '''https://stackoverflow.com/questions/14354171/add-scrolling-to-a-platformer-in-pygame'''
+
     def __init__(self, cameraFunc, width, height):
         self.width = width
         self.height = height
-        #TODO: Link with player start location
+        # TODO: Link with player start location
         self.offsetState = pygame.Rect(self.width / 2, 1000, self.width, self.height)
         self.cameraFunc = cameraFunc
 
     def apply(self, target):
         """Apply camera offset to target"""
+        # Bind x coordinate
         dx = target.rect.x + self.offsetState.x
         dx = dx % self.width
-        # TODO: Clamp y here?
+
+        # Bind y coordinate
+        if 0 <= target.y <= self.height - target.rect.height:
+            target.y = target.y
+        elif target.y > self.height - target.rect.height:
+            target.y = self.height - target.rect.height
+        else:
+            target.y = 0
 
         target.rect = pygame.Rect(dx, target.y, target.height, target.width)
 
         return target.rect
 
-
     def update(self, target):
         '''Updates the camera coordinates to match targets. Centers screen on target'''
         self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
-        #target.rect = self.offsetState
+        # target.rect = self.offsetState
+
 
 class ControlManager(object):
     """Class for tracking game states & managing event loop
@@ -68,8 +77,7 @@ class ControlManager(object):
         self.level_rect = self.level.get_rect()
 
         # TODO: How do we handle level transitions?
-        self.background = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
-        self.background = pygame.transform.scale(self.background, (self.screenWidth, self.screenHeight))
+        self.bg = Background(width=self.screenWidth, height=screenHeight)
 
         # Core settings
         self.clock = pygame.time.Clock()
@@ -132,7 +140,7 @@ class ControlManager(object):
                 # If user clicks red X, toggle run
                 if event.type == pygame.QUIT:
                     self.run = False
-                #elif event.type == pygame.ADDENEMY:
+                # elif event.type == pygame.ADDENEMY:
 
             # Update time delta
             self.dt = self.clock.tick(self.fps)
@@ -196,10 +204,9 @@ class ControlManager(object):
                 # TODO: Display success and move to next level
                 pass
 
-            #print("World",self.world)
+            # print("World",self.world)
 
             # Insert music here
-
 
             self.redrawGameWindow()
 
@@ -237,12 +244,13 @@ class ControlManager(object):
         """redrawGameWindow function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
         black = (0, 0, 0)
-        
+
         # Clear screen
         self.screen.fill(black)
 
-        # Draw background
-        self.screen.blit(self.background, (0,0))
+        # Update background
+        self.bg.move(self.camera.offsetState.x)
+        self.bg.draw(self.screen)
 
         # Move select entities and draw everything to screen
         for entity in self.world:
@@ -253,9 +261,11 @@ class ControlManager(object):
             else:
                 entity.draw(self.screen, entity)
 
+
+
         # Draw Player scoreboard
         font = pygame.font.SysFont('comicsans', 45, True)
-        text = font.render('Score: ' + str(self.score), 1, (0,0,0))
+        text = font.render('Score: ' + str(self.score), 1, (0, 0, 0))
         self.screen.blit(text, (390, 10))
 
         # Draw Player lives tracker
@@ -264,6 +274,7 @@ class ControlManager(object):
         self.screen.blit(text2, (650, 10))
         # Update the main display
         pygame.display.update()
+
 
 class Entity(pygame.sprite.Sprite):
     """This is the top-level class for any character entity that will exist on the screen in-game.
@@ -290,6 +301,7 @@ class Entity(pygame.sprite.Sprite):
     def move(self, **kwargs):
         return NotImplemented
 
+
 class Player(Entity):
     # Attributes: Lives, Weapons/Power-ups
     # Rules: Clipping/Sprite collision: player will lose health if collides with any other object
@@ -315,7 +327,8 @@ class Player(Entity):
 
         # Animation #####################################################################
         # Load player sprite sheet
-        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1, columns=6)
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1,
+                                           columns=6)
 
         # TODO: Need to do the proper math for frame_duration
         self.timer = 0
@@ -341,8 +354,6 @@ class Player(Entity):
         """Blit the player to the window"""
 
         # TODO: Add animation that triggers when facing changes
-        # TODO: Remember: target was self.rect
-
         if self.left_facing:
             surface.blit(self.frame, target)
         else:
@@ -399,7 +410,8 @@ class Player(Entity):
 class tRex(Entity):
     # TODO: STEVE: create tRex Dino Class
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=50, x=random.randrange(0,screenWidth - 121), y=screenHeight - 30, width=30, height=30, vel=random.uniform(0.5, 1.0))
+        super().__init__(health=50, x=random.randrange(0, screenWidth - 121), y=screenHeight - 30, width=30, height=30,
+                         vel=random.uniform(0.5, 1.0))
         self.rgb = (255, 0, 0)
         self.end = screenWidth - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
@@ -425,10 +437,11 @@ class tRex(Entity):
 
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=25, x=random.randrange(0,screenWidth-61), y=screenHeight - 15, width=15, height=15, vel=random.uniform(4,6))
+        super().__init__(health=25, x=random.randrange(0, screenWidth - 61), y=screenHeight - 15, width=15, height=15,
+                         vel=random.uniform(4, 6))
         self.rgb = (255, 165, 0)
-        self.end = screenWidth - (self.width * random.randrange(2,4))
-        self.path = [0 + (self.width * random.randrange(2,4)), self.end]
+        self.end = screenWidth - (self.width * random.randrange(2, 4))
+        self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, R):
@@ -451,7 +464,8 @@ class raptor(Entity):
 
 class ptero(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=25, x=random.randrange(screenWidth - 120, screenWidth - 61), y=random.randrange(60,screenHeight - 60), width=15, height=15,
+        super().__init__(health=25, x=random.randrange(screenWidth - 120, screenWidth - 61),
+                         y=random.randrange(60, screenHeight - 60), width=15, height=15,
                          vel=random.uniform(2, 3))
         self.rgb = (255, 255, 0)
 
@@ -460,9 +474,9 @@ class ptero(Entity):
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
 
         # y-values
-        self.y_vel = random.uniform(-2,2)
+        self.y_vel = random.uniform(-2, 2)
         self.y_end = screenHeight - (self.height * random.randrange(2, 4))
-        self.y_path = [0 + (self.height * random.randrange(2,4)), self.y_end]
+        self.y_path = [0 + (self.height * random.randrange(2, 4)), self.y_end]
 
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
@@ -494,21 +508,19 @@ class ptero(Entity):
             else:
                 self.y_vel = self.y_vel * -1
 
-
         self.rect = pygame.Rect(self.x, self.y, 15, 15)
-
-
 
 
 class Projectile(Entity):
 
     def __init__(self, x, y, radius, color, facing, velocity):
-        super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity) # TODO: xVel and yVel for shooting down at dinos?
+        super().__init__(health=1, x=x, y=y, height=0, width=0,
+                         vel=velocity)  # TODO: xVel and yVel for shooting down at dinos?
         self.x = int(x)
         self.y = int(y)
         self.radius = radius
         self.color = color
-        self.rect = pygame.Rect(self.x - radius, self.y - radius, radius*2, radius*2)
+        self.rect = pygame.Rect(self.x - radius, self.y - radius, radius * 2, radius * 2)
         self.facing = facing
 
     def draw(self, surface, target):
@@ -520,17 +532,35 @@ class Projectile(Entity):
         else:
             self.x += self.vel
 
-        self.rect = pygame.Rect(self.x, self.y, self.radius*2, self.radius*2)
+        self.rect = pygame.Rect(self.x, self.y, self.radius * 2, self.radius * 2)
 
-class BackgroundObjects(Entity):
-    def __init__(self, health, x, y, width, height, vel):
-        super().__init__(health, x, y, width, height, vel)
 
-    def draw(self):
-        return NotImplemented
+class Background():
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.mid_bg = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
+        self.mid_bg = pygame.transform.scale(self.mid_bg, (self.width, self.height))
+        self.mid_rect = self.mid_bg.get_rect()
 
-    def move(self):
-        return NotImplemented
+    def draw(self, surface):
+        surface.blit(self.mid_bg, self.mid_rect)
+        surface.blit(self.mid_bg, self.mid_rect.move(self.mid_rect.width, 0))
+        surface.blit(self.mid_bg, self.mid_rect.move(-self.mid_rect.width, 0))
+
+    def move(self, offset):
+        # Bind x coordinate between 0 and screenWidth
+        if self.mid_rect.left >= self.width:
+            self.mid_rect.x = 0
+        elif self.mid_rect.right <= 0:
+            self.mid_rect.x = 0
+
+        dx = -(self.mid_rect.x - offset)
+        self.mid_rect.move_ip(dx, 0)
+
+        print(self.mid_rect.x, dx)
+
+
 
 # MAIN ##################
 def main():
@@ -538,18 +568,11 @@ def main():
     pygame.init()
 
     # SETTINGS #######################################################
-    # screenWidth = 1500
-    # screenHeight = 750
+    screenWidth = 1500
+    screenHeight = 750
 
     # Instantiation ##################################################
-    game = ControlManager(caption="Dino Hunter")
-
-    # Something, something containers?
-    # TODO: containers may be the same as the world list below... more research needed
-
-
-
-
+    game = ControlManager(caption="Dino Hunter", screenWidth=screenWidth, screenHeight=screenHeight)
 
     # GAME LOOP ######################################################
     game.main_loop()
