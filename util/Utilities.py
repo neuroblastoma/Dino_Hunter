@@ -49,14 +49,13 @@ class SpriteSheet(object):
 
         return retSurfaces
 
-def complex_camera(camera_rect, offset, entity, screenWidth, screenHeight):
+def complex_camera(camera_rect, entity, screenWidth, screenHeight):
     """Tracks the position of the given entity and locks screen to their x position"""
-    # Offset = -(new x - old x)
-    x = -(entity.rect.x - offset)
+    # Create x,y based on entity's position
+    x = -entity.rect.center[0] + screenWidth/2
+    y = entity.rect.y
 
     # Move the camera
-    camera_rect.topleft += (pygame.Vector2((x, entity.y)) - pygame.Vector2(camera_rect.topleft))  # * 0.06
-
-    print(camera_rect.topleft)
+    camera_rect.topleft += (pygame.Vector2((x, y)) - pygame.Vector2(camera_rect.topleft))  # * 0.06
 
     return camera_rect

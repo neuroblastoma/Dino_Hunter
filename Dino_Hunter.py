@@ -25,17 +25,25 @@ class Camera(object):
     def __init__(self, cameraFunc, width, height):
         self.width = width
         self.height = height
-        self.offsetState = pygame.Rect(0, 0, self.width, self.height)
-        self.offset = 0
+        #TODO: Link with player start location
+        self.offsetState = pygame.Rect(self.width / 2, 1000, self.width, self.height)
         self.cameraFunc = cameraFunc
 
     def apply(self, target):
-        print(target.rect)
-        return target.rect.move(self.offsetState.topleft)
+        """Apply camera offset to target"""
+        dx = target.rect.x + self.offsetState.x
+        dx = dx % self.width
+        # TODO: Clamp y here?
+
+        target.rect = pygame.Rect(dx, target.y, target.height, target.width)
+
+        return target.rect
+
 
     def update(self, target):
         '''Updates the camera coordinates to match targets. Centers screen on target'''
-        self.offsetState = self.cameraFunc(self.offsetState, self.offset, target, self.width, self.height)
+        self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
+        #target.rect = self.offsetState
 
 class ControlManager(object):
     """Class for tracking game states & managing event loop
@@ -77,7 +85,7 @@ class ControlManager(object):
         self.bullets = pygame.sprite.Group()
 
         # Sprite initialization
-        self.player = Player()
+        self.player = Player(x=self.screenWidth / 2)
         self.create_enemies()
 
         # Add sprites to "global" tracker
@@ -135,15 +143,19 @@ class ControlManager(object):
             horizontalDirection, verticalDirection, firing = self.parse_keyState()
 
             # Movement
-            self.camera.offset = self.player.rect.x
             self.player.move(verticalDirection, horizontalDirection)
+
+            # Update camera
+            self.player.animate(self.dt)
+            self.camera.update(self.player)
 
             # Projectile spawn
             if firing:
                 # Number of supported bullets on screen
                 if len(self.bullets) < 15:
                     # Adds bullet to bullets sprite group
-                    self.bullets.add(Projectile(round(self.player.x + 20 + self.player.width // 2),
+                    # TODO TEST TEST TEST self.player => self.camera
+                    self.bullets.add(Projectile(round(self.screenWidth // 2 + 20 + self.player.width // 2),
                                                 round(self.player.y + 55 + self.player.height // 4), 2,
                                                 color=(255, 255, 255), facing=self.player.left_facing,
                                                 velocity=int(50)))
@@ -162,7 +174,6 @@ class ControlManager(object):
 
             if self.bullets:
                 for bullet in self.bullets:
-                    # print(bullet.x)
                     pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True)
                     print("COLLISION:", pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=True))
 
@@ -233,17 +244,14 @@ class ControlManager(object):
         # Draw background
         self.screen.blit(self.background, (0,0))
 
-        # Update camera
-        self.player.animate(self.dt)
-        self.player.draw(self.screen, self.player)
-        self.camera.update(self.player)
-
-        print(self.camera.offset)
-
+        # Move select entities and draw everything to screen
         for entity in self.world:
             if not isinstance(entity, Player):
                 entity.move()
+            if not isinstance(entity, Projectile):
                 entity.draw(self.screen, self.camera.apply(entity))
+            else:
+                entity.draw(self.screen, entity)
 
         # Draw Player scoreboard
         font = pygame.font.SysFont('comicsans', 45, True)
@@ -288,9 +296,9 @@ class Player(Entity):
 
     # Starting position(1380, 50)
     # y collision with ground = 575?
-    def __init__(self):
+    def __init__(self, x):
         # TODO: Player should enter screen from top, right
-        super().__init__(health=100, x=100, y=100, width=5, height=5, vel=0)
+        super().__init__(health=100, x=x, y=100, width=5, height=5, vel=0)
 
         # TODO: Sounds
         self.lives = 3
@@ -298,7 +306,7 @@ class Player(Entity):
         # Speed related ##################################################################
         # TODO: This should be both vertical and horizontal speed
         self.max_speed = 7
-        self.max_lift = 3  # 5 pixels/sec
+        self.max_lift = 6  # 5 pixels/sec
         self.lift_speed = 0
 
         # Determines facing direction
@@ -376,7 +384,7 @@ class Player(Entity):
         # Incremental vertical speed
         if vdir < 0 or vdir > 0:
             if self.lift_speed < self.max_lift:
-                self.lift_speed += 0.25
+                self.lift_speed += 0.45
             else:
                 self.lift_speed = self.max_lift
 
@@ -398,8 +406,7 @@ class tRex(Entity):
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, R):
-        self.move()
-        pygame.draw.rect(win, self.rgb, self.rect)
+        pygame.draw.rect(win, self.rgb, R)
 
     def move(self):
         if self.vel > 0:
@@ -425,7 +432,6 @@ class raptor(Entity):
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, R):
-        self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
 
     def move(self):
@@ -461,7 +467,6 @@ class ptero(Entity):
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, win, R):
-        self.move()
         pygame.draw.rect(win, self.rgb, self.rect)
 
     def move(self):
