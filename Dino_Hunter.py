@@ -158,7 +158,6 @@ class ControlManager(object):
 
             horizontalDirection, verticalDirection, firing = self.parse_keyState()
 
-
             # Player-enemy collision detection:
             pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False,
                                                        collided=pygame.sprite.Rect.colliderect)
@@ -293,11 +292,16 @@ class ControlManager(object):
         if self.player.firing:
             # Number of supported bullets on screen
             if len(self.bullets) < 50 + self.current_level:
-                # Adds bullet to bullets sprite group
-                self.bullets.add(Projectile(round(self.screenWidth // 2),
+                # Create a bullet instance
+                bullet = Projectile(round(self.screenWidth // 2),
                                             round(self.player.rect.center[1] + self.player.height // 4), 2,
                                             color=(255, 255, 255), facing=self.player.left_facing,
-                                            velocity=int(3)))
+                                            velocity=int(3), dx=self.player.hdir)
+
+                # Adds bullet to bullets sprite group
+                self.bullets.add(bullet)
+
+            # Add all bullets to world tracker
             self.world.add(self.bullets)
 
         # Move select entities and draw everything to screen
@@ -582,7 +586,7 @@ class ptero(Entity):
 
 class Projectile(Entity):
 
-    def __init__(self, x, y, radius, color, facing, velocity):
+    def __init__(self, x, y, radius, color, facing, velocity, dx):
         super().__init__(health=1, x=x, y=y, height=0, width=0, vel=velocity)
         self.x = int(x)
         self.y = int(y)
@@ -590,30 +594,32 @@ class Projectile(Entity):
         self.color = color
         self.rect = pygame.Rect(self.x - radius, self.y - radius, radius * 2, radius * 2)
         self.facing = facing
+        self.dx = dx
 
         # VECTOR MATH!
         self.offset = pygame.math.Vector2(40, 0).rotate(math.radians(45))
 
-        # Change this based on facing
-        if not self.facing:
-            self.v = pygame.math.Vector2(-self.vel, -2).rotate(0) * 9
-            self.pos = pygame.math.Vector2(self.rect.x - 30, self.rect.y) + self.offset
+        # Change bullet vector based on direction and forward movement
+        if self.facing:
+            if self.dx:
+                self.v = pygame.math.Vector2(self.vel, -2).rotate(0) * 9
+                self.pos = pygame.math.Vector2(self.rect.x - 20, self.rect.y) + self.offset
+            else:
+                self.v = pygame.math.Vector2(self.vel, 0).rotate(0) * 9
+                self.pos = pygame.math.Vector2(self.rect.x - 17, self.rect.y + 12) + self.offset
         else:
-            self.v = pygame.math.Vector2(self.vel, -2).rotate(0) * 9
-            self.pos = pygame.math.Vector2(self.rect.x - 20, self.rect.y) + self.offset
+            if self.dx:
+                self.v = pygame.math.Vector2(-self.vel, -2).rotate(0) * 9
+                self.pos = pygame.math.Vector2(self.rect.x - 30, self.rect.y) + self.offset
+            else:
+                self.v = pygame.math.Vector2(-self.vel, 0).rotate(0) * 9
+                self.pos = pygame.math.Vector2(self.rect.x - 30, self.rect.y + 12) + self.offset
 
     def draw(self, surface, target):
         pygame.draw.circle(surface, self.color, self.rect.center, self.radius)
 
     def move(self):
-        if self.facing:
-            #self.x -= self.vel
-            self.pos -= self.v
-        else:
-            #self.x += self.vel
-            self.pos -= self.v
-
-        #self.rect = pygame.Rect(self.x, self.y, self.radius * 2, self.radius * 2)
+        self.pos -= self.v
         self.rect.center = self.pos
 
 
