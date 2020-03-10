@@ -457,14 +457,11 @@ class Player(Entity):
 
     def draw(self, surface, target):
         """Blit the player to the window"""
-
-        # TODO: Add animation that triggers when facing changes
         super().draw(surface, target)
 
         # Custom Health bar at top left
-        # TODO: Need to fix this bar...
-        pygame.draw.rect(surface, (255, 0, 0), (25, 5, 2*self.health, 20))
-        pygame.draw.rect(surface, (0, 255, 0), (25, 5, 2*self.health - ((2*self.health / self.health) * (self.health - self.damaged)), 20))
+        pygame.draw.rect(surface, (255, 0, 0), (25, 5, self.health, 20))
+        pygame.draw.rect(surface, (0, 255, 0), (25, 5, (self.health - self.damaged), 20))
 
     def move(self):
         """
