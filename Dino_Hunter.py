@@ -15,10 +15,11 @@
 import pygame
 import os
 import math
+import random
 from itertools import cycle
 from util import Utilities
-import random
-
+from util import FIFO
+from util import Stack
 
 # CLASSES ##################
 class Camera(object):
@@ -71,11 +72,7 @@ class ControlManager(object):
         self.screen_rect = self.screen.get_rect()
         self.viewport = self.screen.get_rect()
 
-        # TODO: what does this do? Is it only used for text???
-        self.level = pygame.Surface((1000, 1000)).convert()
-        self.level_rect = self.level.get_rect()
-
-        # TODO: How do we handle level transitions?
+        # Background
         self.bg = Background(width=self.screen_width, height=screen_height)
 
         # Core settings
@@ -90,6 +87,9 @@ class ControlManager(object):
         self.enemies = pygame.sprite.Group()
         self.players = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
+
+        # Tracking HUD
+        self.tracker = Stack.Stack()
 
         # Sprite initialization
         self.player = Player(x=self.screen_width / 2)
@@ -123,14 +123,6 @@ class ControlManager(object):
                 self.enemies.add(Raptor(self.screen_width, self.screen_height))
             for i in range(base[2] * self.current_level):
                 self.enemies.add(Ptero(self.screen_width, self.screen_height))
-
-    def make_text(self, message):
-        """Renders text object to the screen"""
-        font = pygame.font.Font(None, 100)
-        text = font.render(message, True, (100, 100, 175))
-        rect = text.get_rect(centerx=self.level_rect.centerx, y=100)
-
-        return text, rect
 
     def main_loop(self):
         """This loop represents all the actions that need to be taken during one cycle:
@@ -247,12 +239,10 @@ class ControlManager(object):
                 for e in self.enemies:
                     self.world.add(e)
 
-
             # TODO: Insert music here
 
             self.redraw_game_window()
 
-            # Check to see if player is out of lives?
             if self.key_state[pygame.K_ESCAPE]:
                 self.run = False
 
@@ -314,17 +304,26 @@ class ControlManager(object):
         for entity in self.world:
             entity.animate(self.dt)
 
+            # Player has already moved (to update camera)
             if not isinstance(entity, Player):
                 entity.move()
+
+            # Offset is not applied to projectiles
             if not isinstance(entity, Projectile):
                 entity.draw(self.screen, self.camera.apply(entity))
             else:
                 entity.draw(self.screen, entity)
 
+            # Add enemies to HUD tracker
+            # TODO: Create enemy subclass
+            if not isinstance(entity, Player) and not isinstance(entity, Projectile):
+                self.tracker.push(entity)
+
+
+        # HUD Displays ################################################
         # Draw Player scoreboard
         font1 = pygame.font.SysFont('comicsans', 45, True)
         text = font1.render('Score: ' + str(self.score), 1, (0, 0, 0))
-
         self.screen.blit(text, (390, 10))
 
         # Draw Player level and lives tracker
@@ -341,6 +340,13 @@ class ControlManager(object):
         # Draw projectile detail
         gun_str = font1.render("Gun Strength: " + str(self.player.gun_str), 1, (0, 0, 0))
         self.screen.blit(gun_str, (1000, 10))
+
+        # TODO: Draw tracker
+        #   1. while stack is not empty: pop enemy
+        #   2. Draw x,y on scaled down rectangle
+        #   3. ???
+        #   4. Profit
+        # TODO: ADD TO SEPARATE METHOD!
 
         # Update the main display
         pygame.display.update()
