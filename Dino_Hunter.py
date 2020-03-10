@@ -176,7 +176,8 @@ class ControlManager(object):
                 if pe_collision[0].health <= 0:
                     pe_collision[0].kill()
 
-                if self.player.lives <= 0:  # TODO: Game over screen...
+                # TODO: Game over screen?
+                if self.player.lives <= 0:
                     counter = 500
                     while counter > 0:
                         GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
@@ -191,6 +192,7 @@ class ControlManager(object):
                     self.player.kill()
                     self.run = False
 
+            # Projectile-enemy collision detection
             if self.bullets:
                 for bullet in self.bullets:
                     # bullet collision detection
@@ -219,36 +221,43 @@ class ControlManager(object):
             self.player.x = self.player.x % self.screenWidth
 
             # Update camera
-            self.player.animate(self.dt)
             self.camera.update(self.player)
 
+            # Advance to next level
             if not self.enemies:
-                # TODO: Display success and move to next level
                 counter = 100
                 while counter > 0:
                     # Draw Level Complete
                     font = pygame.font.SysFont('comicsans', 100, True)
-                    level_txt = font.render("LEVEL COMPLETE! " + str(counter), 1, (0, 255, 0))
+                    level_txt = font.render("LEVEL COMPLETE! " + str(counter//10), 1, (0, 255, 0))
                     self.screen.blit(level_txt, (375, 300))
                     counter -= 1
-                    print("counter =",counter)
+                    print("counter =", counter)
+                    self.player.rect.y = self.screenHeight / 2
+                    self.player.rect.x = self.screenWidth / 2
                     pygame.display.update()
                     self.redrawGameWindow()
-                self.player.x = 100
-                self.player.y = 100
+
+                # Reset player position
+                self.player.rect.y = self.screenHeight / 2
+                self.player.rect.x = self.screenWidth / 2
+
+                # Increase gun strength
                 self.player.gun_str += 1
+
+                # Spawn new enemies
                 self.create_enemies()
                 for e in self.enemies:
                     self.world.add(e)
 
 
-            # Insert music here
+            # TODO: Insert music here
 
             self.redrawGameWindow()
 
             # Check to see if player is out of lives?
             if self.keyState[pygame.K_ESCAPE]:
-                self.run = False #TODO: Game over screen?
+                self.run = False
 
     def parse_keyState(self):
         '''Parses pressed keys'''
@@ -291,7 +300,7 @@ class ControlManager(object):
         # Projectile spawn
         if self.player.firing:
             # Number of supported bullets on screen
-            if len(self.bullets) < 50 + self.current_level:
+            if len(self.bullets) < 5 + self.current_level:
                 # Create a bullet instance
                 bullet = Projectile(round(self.screenWidth // 2),
                                             round(self.player.rect.center[1] + self.player.height // 4), 2,
@@ -306,6 +315,8 @@ class ControlManager(object):
 
         # Move select entities and draw everything to screen
         for entity in self.world:
+            entity.animate(self.dt)
+
             if not isinstance(entity, Player):
                 entity.move()
             if not isinstance(entity, Projectile):
@@ -476,61 +487,116 @@ class Player(Entity):
 
 class tRex(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=50, x=random.randrange(0, screenWidth - 121), y=random.randrange(screenHeight - 60, screenHeight - 40), width=30, height=30,
+        super().__init__(health=50, x=random.randrange(0, screenWidth - 121), y=random.randrange(screenHeight - 300, screenHeight - 200), width=222, height=150,
                          vel=random.uniform(0.5, 1.0))
         self.rgb = (255, 0, 0)
         self.end = screenWidth - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
-        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+        # Animation #####################################################################
+        # Load player sprite sheet
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "trex-sheet.png"), rows=1,
+                                           columns=4)
+        self.facing = False
+        self.timer = 0
+        self.frame_duration = 175
+        self.frames = self.sheet.get_images()
+
+        for frame in self.frames:
+            frame.set_colorkey((255, 255, 255))
+
+        self.frameCycle = cycle(self.frames)
+        self.frame = next(self.frameCycle)
+        self.rect = self.frame.get_rect()
+
+    def animate(self, dt):
+        self.timer += dt
+        while self.timer >= self.frame_duration:
+            self.timer -= self.frame_duration
+            self.frame = next(self.frameCycle)
 
     def draw(self, win, R):
-        pygame.draw.rect(win, self.rgb, self.rect)
-        pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 9, self.y - 15, 50, 10))
-        pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 9, self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
+        if self.facing:
+            win.blit(self.frame, R)
+        else:
+            win.blit(pygame.transform.flip(self.frame, True, False), R)
+        # Health bar
+        pygame.draw.rect(win, (255, 0, 0), (self.rect.center[0], self.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.rect.center[0], self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
             if self.x + self.vel < self.path[1]:
+                self.facing = True
                 self.x += self.vel
             else:
                 self.vel = self.vel * -1
         else:
             if self.x - self.vel > self.path[0]:
+                self.facing = False
                 self.x += self.vel
             else:
                 self.vel = self.vel * -1
 
-        self.rect = pygame.Rect(self.x, self.y, 30, 30)
+        self.rect = pygame.Rect(self.x, self.y, 150, 218)
 
 
 class raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=random.randrange(screenHeight - 60, screenHeight - 40), width=15, height=15,
+        super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=random.randrange(screenHeight - 200, screenHeight - 100), width=15, height=15,
                          vel=random.uniform(3, 5))
 
         self.rgb = (255, 165, 0)
         self.end = screenWidth - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
-        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
+        # Animation #####################################################################
+        # Load player sprite sheet
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "raptor-sheet.png"), rows=1,
+                                           columns=6)
+        self.facing = False
+        self.timer = 0
+        self.frame_duration = 70
+        self.frames = self.sheet.get_images()
+
+        for frame in self.frames:
+            frame.set_colorkey((255, 255, 255))
+
+        self.frameCycle = cycle(self.frames)
+        self.frame = next(self.frameCycle)
+        self.rect = self.frame.get_rect()
+
+    def animate(self, dt):
+        self.timer += dt
+        while self.timer >= self.frame_duration:
+            self.timer -= self.frame_duration
+            self.frame = next(self.frameCycle)
 
     def draw(self, win, R):
-        pygame.draw.rect(win, self.rgb, R)
-        pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 15, self.rect.y - 15, 50, 10))
-        pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 15, self.rect.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
+        if self.facing:
+            win.blit(self.frame, R)
+        else:
+            win.blit(pygame.transform.flip(self.frame, True, False), R)
+
+        # Health bar
+        pygame.draw.rect(win, (255, 0, 0), (self.rect.center[0], self.rect.y - 15, 50, 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.rect.center[0], self.rect.y - 15, 50 - ((50 / 15) * (15 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
             if self.x + self.vel < self.path[1]:
+                self.facing = True
                 self.x += self.vel
             else:
                 self.vel = self.vel * -1
         else:
             if self.x - self.vel > self.path[0]:
+                self.facing = False
                 self.x += self.vel
             else:
                 self.vel = self.vel * -1
 
-        self.rect = pygame.Rect(self.x, self.y, 15, 15)
+        self.rect = pygame.Rect(self.x, self.y, 90, 150)
 
 
 class ptero(Entity):
@@ -549,10 +615,35 @@ class ptero(Entity):
         self.y_end = screenHeight - (self.height * random.randrange(2, 4))
         self.y_path = [0 + (self.height * random.randrange(2, 4)), self.y_end]
 
-        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        # Animation #####################################################################
+        # Load player sprite sheet
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "ptero-sheet.png"), rows=1,
+                                           columns=6)
+        self.facing = False
+        self.timer = 0
+        self.frame_duration = 175
+        self.frames = self.sheet.get_images()
 
-    def draw(self, win, r):
-        pygame.draw.rect(win, self.rgb, self.rect)
+        for frame in self.frames:
+            frame.set_colorkey((255, 255, 255))
+
+        self.frameCycle = cycle(self.frames)
+        self.frame = next(self.frameCycle)
+        self.rect = self.frame.get_rect()
+
+    def animate(self, dt):
+        self.timer += dt
+        while self.timer >= self.frame_duration:
+            self.timer -= self.frame_duration
+            self.frame = next(self.frameCycle)
+
+    def draw(self, win, R):
+        if self.facing:
+            win.blit(self.frame, R)
+        else:
+            win.blit(pygame.transform.flip(self.frame, True, False), R)
+
+        # Health bar
         pygame.draw.rect(win, (255, 0, 0), (self.rect.x - 15, self.y - 15, 50, 10))
         pygame.draw.rect(win, (0, 255, 0), (self.rect.x - 15, self.y - 15, 50 - ((50/10) * (10 - self.health)), 10))
 
@@ -560,11 +651,13 @@ class ptero(Entity):
         # x-based movements
         if self.vel > 0:
             if self.x + self.vel < self.path[1]:
+                self.facing = True
                 self.x += self.vel
             else:
                 self.vel = self.vel * -1
         else:
             if self.x - self.vel > self.path[0]:
+                self.facing = False
                 self.x += self.vel
             else:
                 self.vel = self.vel * -1
@@ -581,7 +674,8 @@ class ptero(Entity):
             else:
                 self.y_vel = self.y_vel * -1
 
-        self.rect = pygame.Rect(self.x, self.y, 15, 15)
+        # Not including wings in hit box (110, 170)
+        self.rect = pygame.Rect(self.x, self.y, 110, 170)
 
 
 class Projectile(Entity):
@@ -614,6 +708,9 @@ class Projectile(Entity):
             else:
                 self.v = pygame.math.Vector2(-self.vel, 0).rotate(0) * 9
                 self.pos = pygame.math.Vector2(self.rect.x - 30, self.rect.y + 12) + self.offset
+
+    def animate(self, dt):
+        return NotImplemented
 
     def draw(self, surface, target):
         pygame.draw.circle(surface, self.color, self.rect.center, self.radius)
