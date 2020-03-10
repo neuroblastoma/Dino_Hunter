@@ -34,7 +34,7 @@ class groundDino(object):
     width1 = 30
     height1 = 30
     x1 = 5
-    y1 = screenHeight - height1
+    y1 = screen_height - height1
     vel1 = 0.5
     x1Mod = 1 '''
 
@@ -51,11 +51,11 @@ class groundDino(object):
         #win.fill((0, 0, 0))
         pygame.draw.rect(win, self.rgb, (self.x, self.y, self.width, self.height))
 
-    # Ground Dino 2 Values (raptor)
+    # Ground Dino 2 Values (Raptor)
     # width2 = 15
     # height2 = 15
     # x2 = 500
-    # y2 = screenHeight - height2
+    # y2 = screen_height - height2
     # vel2 = 5
     # x2Mod = 1
 
@@ -66,7 +66,7 @@ class airDino(object):
     airWidth = 15
     airHeight = 15
     airX = 50
-    airY = screenHeight - 50
+    airY = screen_height - 50
     airVel = 5
     airXMod = 1
     airYMod = -1 '''
@@ -130,14 +130,14 @@ run = True
 while run:
     pygame.time.delay(25)
 
-    #tRex Movement
+    #TRex Movement
     tRex.x += tRex.vel * tRex.xMod
     if tRex.x == screenWidth - tRex.width:
         tRex.xMod = -1
     if tRex.x == 0:
         tRex.xMod = 1
 
-    #raptor Movement
+    #Raptor Movement
     raptor.x += raptor.vel * raptor.xMod
     if raptor.x == screenWidth - raptor.width:
         raptor.xMod = -1
@@ -191,7 +191,7 @@ while run:
         
         #xGun = x
         #yGun = y + (height / 2)
-        #pygame.draw.rect(win,(0,0,0),(xGun,yGun,screenWidth,2))
+        #pygame.draw.rect(win,(0,0,0),(xGun,yGun,screen_width,2))
         #pygame.display.update()
         
         if len(bullets) < 2:                                                                                     #radius, color(black)               

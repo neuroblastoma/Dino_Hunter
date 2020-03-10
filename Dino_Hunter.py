@@ -22,7 +22,7 @@ import random
 
 # CLASSES ##################
 class Camera(object):
-    '''https://stackoverflow.com/questions/14354171/add-scrolling-to-a-platformer-in-pygame'''
+    """Creates a viewport on a fixed x-axis"""
 
     def __init__(self, cameraFunc, width, height):
         self.width = width
@@ -50,26 +50,24 @@ class Camera(object):
         return target.rect
 
     def update(self, target):
-        '''Updates the camera coordinates to match targets. Centers screen on target'''
+        """Updates the camera coordinates to match targets. Centers screen on target"""
         self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
 
 
 class ControlManager(object):
-    """Class for tracking game states & managing event loop
-        https://github.com/Mekire/pygame-samples/blob/master/platforming/moving_platforms.py
-    """
+    """Class for tracking game states & managing event loop"""
 
-    def __init__(self, caption, screenWidth=1500, screenHeight=750):
+    def __init__(self, caption, screen_width=1500, screen_height=750):
         """Initialize the display and prepare game objects"""
         # Screen settings
-        self.screenWidth = screenWidth
-        self.screenHeight = screenHeight
+        self.screen_width = screen_width
+        self.screen_height = screen_height
         self.fps = 60
         self.current_level = -1
 
         # Screen attributes
         pygame.display.set_caption(caption)
-        self.screen = pygame.display.set_mode((self.screenWidth, self.screenHeight))
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         self.screen_rect = self.screen.get_rect()
         self.viewport = self.screen.get_rect()
 
@@ -78,13 +76,13 @@ class ControlManager(object):
         self.level_rect = self.level.get_rect()
 
         # TODO: How do we handle level transitions?
-        self.bg = Background(width=self.screenWidth, height=screenHeight)
+        self.bg = Background(width=self.screen_width, height=screen_height)
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.complex_camera, self.screenWidth, self.screenHeight)
+        self.camera = Camera(Utilities.complex_camera, self.screen_width, self.screen_height)
         self.dt = None
-        self.keyState = None
+        self.key_state = None
         self.run = True
 
         # Sprite trackers
@@ -94,7 +92,7 @@ class ControlManager(object):
         self.bullets = pygame.sprite.Group()
 
         # Sprite initialization
-        self.player = Player(x=self.screenWidth / 2)
+        self.player = Player(x=self.screen_width / 2)
         self.create_enemies()
 
         # Add sprites to "global" tracker
@@ -109,24 +107,22 @@ class ControlManager(object):
         self.lives = 3
 
     def create_enemies(self):
-        # TODO: different amount/types depending on level?
-        # TODO: For level: Test
         base = (2,4,3)
         self.current_level += 1
         if self.current_level == 0:
             for i in range(1):
-                self.enemies.add(tRex(self.screenWidth, self.screenHeight))
+                self.enemies.add(TRex(self.screen_width, self.screen_height))
             for i in range(1):
-                self.enemies.add(raptor(self.screenWidth, self.screenHeight))
+                self.enemies.add(Raptor(self.screen_width, self.screen_height))
             for i in range(1):
-                self.enemies.add(ptero(self.screenWidth, self.screenHeight))
+                self.enemies.add(Ptero(self.screen_width, self.screen_height))
         else:
             for i in range(base[0] * self.current_level):
-                self.enemies.add(tRex(self.screenWidth, self.screenHeight))
+                self.enemies.add(TRex(self.screen_width, self.screen_height))
             for i in range(base[1] * self.current_level):
-                self.enemies.add(raptor(self.screenWidth, self.screenHeight))
+                self.enemies.add(Raptor(self.screen_width, self.screen_height))
             for i in range(base[2] * self.current_level):
-                self.enemies.add(ptero(self.screenWidth, self.screenHeight))
+                self.enemies.add(Ptero(self.screen_width, self.screen_height))
 
     def make_text(self, message):
         """Renders text object to the screen"""
@@ -154,9 +150,9 @@ class ControlManager(object):
             self.dt = self.clock.tick(self.fps)
 
             # Update key state
-            self.keyState = pygame.key.get_pressed()
+            self.key_state = pygame.key.get_pressed()
 
-            horizontalDirection, verticalDirection, firing = self.parse_keyState()
+            horizontal_direction, vertical_direction, firing = self.parse_key_state()
 
             # Player-enemy collision detection:
             pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False,
@@ -180,14 +176,15 @@ class ControlManager(object):
                 if self.player.lives <= 0:
                     counter = 500
                     while counter > 0:
-                        GO_txt = font.render("GAME OVER!", 1, (0, 255, 0))
-                        self.screen.blit(GO_txt, (375, 300))
+                        font = pygame.font.SysFont('comicsans', 100, True)
+                        go_txt = font.render("GAME OVER!", 1, (0, 255, 0))
+                        self.screen.blit(go_txt, (375, 300))
                         score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
                         self.screen.blit(score_txt, (375, 400))
                         counter -= 1
                         print("Counter =", counter)
                         pygame.display.update()
-                        self.redrawGameWindow()
+                        self.redraw_game_window()
 
                     self.player.kill()
                     self.run = False
@@ -207,18 +204,18 @@ class ControlManager(object):
                         self.bullets.remove(bullet)
                         self.world.remove(bullet)
 
-                    if bullet.rect.x > self.screenWidth or bullet.rect.x < 0:
+                    if bullet.rect.x > self.screen_width or bullet.rect.x < 0:
                         self.bullets.remove(bullet)
                         self.world.remove(bullet)
 
             # Movement
-            self.player.vdir = verticalDirection
-            self.player.hdir = horizontalDirection
+            self.player.vdir = vertical_direction
+            self.player.hdir = horizontal_direction
             self.player.firing = firing
             self.player.move()
 
             # Clamp player's x coordinate:
-            self.player.x = self.player.x % self.screenWidth
+            self.player.x = self.player.x % self.screen_width
 
             # Update camera
             self.camera.update(self.player)
@@ -233,14 +230,14 @@ class ControlManager(object):
                     self.screen.blit(level_txt, (375, 300))
                     counter -= 1
                     print("counter =", counter)
-                    self.player.rect.y = self.screenHeight / 2
-                    self.player.rect.x = self.screenWidth / 2
+                    self.player.rect.y = self.screen_height / 2
+                    self.player.rect.x = self.screen_width / 2
                     pygame.display.update()
-                    self.redrawGameWindow()
+                    self.redraw_game_window()
 
                 # Reset player position
-                self.player.rect.y = self.screenHeight / 2
-                self.player.rect.x = self.screenWidth / 2
+                self.player.rect.y = self.screen_height / 2
+                self.player.rect.x = self.screen_width / 2
 
                 # Increase gun strength
                 self.player.gun_str += 1
@@ -253,40 +250,40 @@ class ControlManager(object):
 
             # TODO: Insert music here
 
-            self.redrawGameWindow()
+            self.redraw_game_window()
 
             # Check to see if player is out of lives?
-            if self.keyState[pygame.K_ESCAPE]:
+            if self.key_state[pygame.K_ESCAPE]:
                 self.run = False
 
-    def parse_keyState(self):
-        '''Parses pressed keys'''
+    def parse_key_state(self):
+        """Parses pressed keys"""
         # Quit
-        if self.keyState[pygame.K_ESCAPE]:
+        if self.key_state[pygame.K_ESCAPE]:
             self.run = False
 
         # Movement
         # If > 0: up/left else down/right
-        verticalDirection = 0
-        horizontalDirection = 0
+        vertical_direction = 0
+        horizontal_direction = 0
 
         # Directional keys
-        if self.keyState[pygame.K_w] or self.keyState[pygame.K_s]:
-            verticalDirection = self.keyState[pygame.K_s] - self.keyState[pygame.K_w]
-        elif self.keyState[pygame.K_UP] or self.keyState[pygame.K_DOWN]:
-            verticalDirection = self.keyState[pygame.K_DOWN] - self.keyState[pygame.K_UP]
-        if self.keyState[pygame.K_a] or self.keyState[pygame.K_d]:
-            horizontalDirection = self.keyState[pygame.K_d] - self.keyState[pygame.K_a]
-        elif self.keyState[pygame.K_LEFT] or self.keyState[pygame.K_RIGHT]:
-            horizontalDirection = self.keyState[pygame.K_RIGHT] - self.keyState[pygame.K_LEFT]
+        if self.key_state[pygame.K_w] or self.key_state[pygame.K_s]:
+            vertical_direction = self.key_state[pygame.K_s] - self.key_state[pygame.K_w]
+        elif self.key_state[pygame.K_UP] or self.key_state[pygame.K_DOWN]:
+            vertical_direction = self.key_state[pygame.K_DOWN] - self.key_state[pygame.K_UP]
+        if self.key_state[pygame.K_a] or self.key_state[pygame.K_d]:
+            horizontal_direction = self.key_state[pygame.K_d] - self.key_state[pygame.K_a]
+        elif self.key_state[pygame.K_LEFT] or self.key_state[pygame.K_RIGHT]:
+            horizontal_direction = self.key_state[pygame.K_RIGHT] - self.key_state[pygame.K_LEFT]
 
         # Weapon-related
-        firing = self.keyState[pygame.K_SPACE]
+        firing = self.key_state[pygame.K_SPACE]
 
-        return horizontalDirection, verticalDirection, firing
+        return horizontal_direction, vertical_direction, firing
 
-    def redrawGameWindow(self):
-        """redrawGameWindow function will fill the window with the specific RGB value and then call on each
+    def redraw_game_window(self):
+        """redraw_game_window function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
         black = (0, 0, 0)
 
@@ -302,10 +299,10 @@ class ControlManager(object):
             # Number of supported bullets on screen
             if len(self.bullets) < 5 + self.current_level:
                 # Create a bullet instance
-                bullet = Projectile(round(self.screenWidth // 2),
-                                            round(self.player.rect.center[1] + self.player.height // 4), 2,
-                                            color=(255, 255, 255), facing=self.player.left_facing,
-                                            velocity=int(3), dx=self.player.hdir)
+                bullet = Projectile(round(self.screen_width // 2),
+                                    round(self.player.rect.center[1] + self.player.height // 4), 2,
+                                    color=(255, 255, 255), facing=self.player.left_facing,
+                                    velocity=int(3), dx=self.player.hdir)
 
                 # Adds bullet to bullets sprite group
                 self.bullets.add(bullet)
@@ -352,9 +349,7 @@ class ControlManager(object):
 class Entity(pygame.sprite.Sprite):
     """This is the top-level class for any character entity that will exist on the screen in-game.
     It extends the Pygame Sprite class (https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.Sprite)
-    Attributes: health, width, height, x-position, y-position, and velocity.
-    Behaviors: DrawToWindow, BoundToGameWindow
-    Rules: ? """
+    """
 
     def __init__(self, health, x, y, width, height, vel):
         super().__init__()
@@ -440,7 +435,8 @@ class Player(Entity):
         pygame.draw.rect(surface, (0, 255, 0), (25, 5, 200 - ((200 / 100) * (100 - self.health)), 20))
 
     def move(self):
-        """Moves player based on keyboard input and tracks facing direct. Movement is not instantaneous.
+        """
+        Moves player based on keyboard input and tracks facing direct. Movement is not instantaneous.
             The following cases apply to horizontal player movement
                 1. If player is stationary, horizontal speed resets after slowing down
                 2. If player changes direction, horizontal speed is negated
@@ -485,12 +481,13 @@ class Player(Entity):
         self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
 
-class tRex(Entity):
-    def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=50, x=random.randrange(0, screenWidth - 121), y=random.randrange(screenHeight - 300, screenHeight - 200), width=222, height=150,
+class TRex(Entity):
+    def __init__(self, screen_width, screen_height):
+        super().__init__(health=50, x=random.randrange(0, screen_width - 121),
+                         y=random.randrange(screen_height - 300, screen_height - 200), width=222, height=150,
                          vel=random.uniform(0.5, 1.0))
         self.rgb = (255, 0, 0)
-        self.end = screenWidth - (self.width * random.randrange(2, 4))
+        self.end = screen_width - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
 
         # Animation #####################################################################
@@ -522,7 +519,8 @@ class tRex(Entity):
             win.blit(pygame.transform.flip(self.frame, True, False), R)
         # Health bar
         pygame.draw.rect(win, (255, 0, 0), (self.rect.center[0], self.y - 15, 50, 10))
-        pygame.draw.rect(win, (0, 255, 0), (self.rect.center[0], self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
+        pygame.draw.rect(win, (0, 255, 0), (self.rect.center[0],
+                                            self.y - 15, 50 - ((50 / 50) * (50 - self.health)), 10))
 
     def move(self):
         if self.vel > 0:
@@ -541,7 +539,7 @@ class tRex(Entity):
         self.rect = pygame.Rect(self.x, self.y, 150, 218)
 
 
-class raptor(Entity):
+class Raptor(Entity):
     def __init__(self, screenWidth, screenHeight):
         super().__init__(health=15, x=random.randrange(0, screenWidth - 61), y=random.randrange(screenHeight - 200, screenHeight - 100), width=15, height=15,
                          vel=random.uniform(3, 5))
@@ -552,7 +550,7 @@ class raptor(Entity):
 
         # Animation #####################################################################
         # Load player sprite sheet
-        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "raptor-sheet.png"), rows=1,
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "Raptor-sheet.png"), rows=1,
                                            columns=6)
         self.facing = False
         self.timer = 0
@@ -572,11 +570,11 @@ class raptor(Entity):
             self.timer -= self.frame_duration
             self.frame = next(self.frameCycle)
 
-    def draw(self, win, R):
+    def draw(self, win, r):
         if self.facing:
-            win.blit(self.frame, R)
+            win.blit(self.frame, r)
         else:
-            win.blit(pygame.transform.flip(self.frame, True, False), R)
+            win.blit(pygame.transform.flip(self.frame, True, False), r)
 
         # Health bar
         pygame.draw.rect(win, (255, 0, 0), (self.rect.center[0], self.rect.y - 15, 50, 10))
@@ -599,25 +597,25 @@ class raptor(Entity):
         self.rect = pygame.Rect(self.x, self.y, 90, 150)
 
 
-class ptero(Entity):
-    def __init__(self, screenWidth, screenHeight):
-        super().__init__(health=10, x=random.randrange(screenWidth - 120, screenWidth - 61),
-                         y=random.randrange(60, screenHeight - 60), width=15, height=15,
+class Ptero(Entity):
+    def __init__(self, screen_width, screen_height):
+        super().__init__(health=10, x=random.randrange(screen_width - 120, screen_width - 61),
+                         y=random.randrange(60, screen_height - 60), width=15, height=15,
                          vel=random.uniform(2, 3))
         self.rgb = (255, 255, 0)
 
         # x-values
-        self.end = screenWidth - (self.width * random.randrange(2, 4))
+        self.end = screen_width - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
 
         # y-values
         self.y_vel = random.uniform(-2, 2)
-        self.y_end = screenHeight - (self.height * random.randrange(2, 4))
+        self.y_end = screen_height - (self.height * random.randrange(2, 4))
         self.y_path = [0 + (self.height * random.randrange(2, 4)), self.y_end]
 
         # Animation #####################################################################
         # Load player sprite sheet
-        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "ptero-sheet.png"), rows=1,
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "Ptero-sheet.png"), rows=1,
                                            columns=6)
         self.facing = False
         self.timer = 0
@@ -720,7 +718,7 @@ class Projectile(Entity):
         self.rect.center = self.pos
 
 
-class Background():
+class Background(object):
     def __init__(self, width, height):
         self.width = width
         self.height = height
@@ -734,7 +732,7 @@ class Background():
         surface.blit(self.mid_bg, self.mid_rect.move(-self.mid_rect.width, 0))
 
     def move(self, offset):
-        # Bind x coordinate between 0 and screenWidth
+        # Bind x coordinate between 0 and screen_width
         if self.mid_rect.left >= self.width:
             self.mid_rect.x = 0
         elif self.mid_rect.right <= 0:
@@ -750,11 +748,11 @@ def main():
     pygame.init()
 
     # SETTINGS #######################################################
-    screenWidth = 1500
-    screenHeight = 750
+    screen_width = 1500
+    screen_height = 750
 
     # Instantiation ##################################################
-    game = ControlManager(caption="Dino Hunter", screenWidth=screenWidth, screenHeight=screenHeight)
+    game = ControlManager(caption="Dino Hunter", screen_width=screen_width, screen_height=screen_height)
 
     # GAME LOOP ######################################################
     game.main_loop()
