@@ -1,4 +1,5 @@
 import pygame
+import math
 
 
 class SpriteSheet(object):
@@ -23,7 +24,6 @@ class SpriteSheet(object):
         self.cols = columns
 
     def get_images(self):
-        # TODO: Error checking
         rects = []
         spriteWidth = self.sheet.get_width() // self.cols
         spriteHeight = self.sheet.get_height() // self.rows
@@ -49,14 +49,19 @@ class SpriteSheet(object):
 
         return retSurfaces
 
+
 def complex_camera(camera_rect, entity, screenWidth, screenHeight):
     """Tracks the position of the given entity and locks screen to their x position"""
 
     # Create x,y based on entity's position
-    x = -entity.rect.center[0] + screenWidth/2
+    x = -entity.rect.center[0] + screenWidth / 2
     y = entity.rect.y
 
     # Move the camera
     camera_rect.topleft += (pygame.Vector2((x, y)) - pygame.Vector2(camera_rect.topleft))  # * 0.06
 
     return camera_rect
+
+
+def determine_layer(height):
+    return lambda x: math.floor((height + x) / 10)

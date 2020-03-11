@@ -74,6 +74,8 @@ class ControlManager(object):
         # Background
         self.bg = Background(width=self.screen_width, height=screen_height)
 
+        self.determine_layer = Utilities.determine_layer(self.screen_height)
+
         # Core settings
         self.clock = pygame.time.Clock()
         self.camera = Camera(Utilities.complex_camera, self.screen_width, self.screen_height)
@@ -89,7 +91,7 @@ class ControlManager(object):
         self.mob_queue = FIFO.FIFO()
 
         # Sprite trackers
-        self.world = pygame.sprite.Group()
+        self.world = pygame.sprite.LayeredUpdates()
         self.enemies = pygame.sprite.Group()
         self.players = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
@@ -102,7 +104,7 @@ class ControlManager(object):
         self.create_enemies()
 
         # Add sprites to "global" tracker
-        self.world.add(self.player)
+        self.world.add(self.player, layer=self.player.layer)
         self.players.add(self.player)
 
         # score / lives settings
@@ -147,8 +149,11 @@ class ControlManager(object):
             # Mob spawn
             while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
                 e = self.mob_queue.remove()
+                # Adjust layer depending on y value
+                e.layer = self.determine_layer(e.y)
+                print(e.y, e.layer, e)
                 self.enemies.add(e)
-                self.world.add(e)
+                self.world.add(e, layer=e.layer)
 
             # Collision detection
             self.detect_collision()
@@ -284,8 +289,6 @@ class ControlManager(object):
         """redraw_game_window function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
 
-        # TODO: IDEA! Assign labels using a lambda function based on y position to determine render order
-
         black = (0, 0, 0)
 
         # Clear screen
@@ -326,7 +329,6 @@ class ControlManager(object):
                 entity.draw(self.screen, entity)
 
             # Add enemies to HUD tracker
-            # TODO: Create enemy subclass
             if not isinstance(entity, Projectile):
                 self.tracker.push(entity)
 
@@ -482,6 +484,8 @@ class Player(Entity):
         self.facing = True
         self.old_horizontalDirection = -1
 
+        self.layer = 5
+
         # Animation #####################################################################
         # Load player sprite sheet
         self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1,
@@ -564,6 +568,7 @@ class Enemy(Entity):
         self.end = None
         self.path = None
         self.initialize_animation(spritesheet, rows, cols, duration)
+        self.layer = 1
 
     def initialize_animation(self, filename, rows, cols, duration):
         # Animation #####################################################################
