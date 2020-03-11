@@ -38,12 +38,12 @@ class Camera(object):
         dx = dx % self.width
 
         # Bind y coordinate
-        if 0 <= target.y <= self.height - target.rect.height:
+        if 101 <= target.y <= self.height - target.rect.height:
             target.y = target.y
         elif target.y > self.height - target.rect.height:
             target.y = self.height - target.rect.height
         else:
-            target.y = 0
+            target.y = 101
 
         target.rect = pygame.Rect(dx, target.y, target.rect.height, target.rect.width)
 
@@ -81,6 +81,10 @@ class ControlManager(object):
         self.key_state = None
         self.run = True
 
+        # HUD surface
+        self.hud = pygame.Surface((self.screen_width, 100))
+        self.hud_font = pygame.font.Font(os.path.join("util", "PressStart2P-Regular.ttf"), 15)
+
         # Sprite trackers
         self.world = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
@@ -106,6 +110,7 @@ class ControlManager(object):
         self.lives = 3
 
     def create_enemies(self):
+        # TODO: Create a FIFO queue to handle larger sets of enemies
         base = (2, 4, 3)
         self.current_level += 1
         if self.current_level == 0:
@@ -145,59 +150,8 @@ class ControlManager(object):
 
             horizontal_direction, vertical_direction, firing = self.parse_key_state()
 
-            # Player-enemy collision detection:
-            pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False,
-                                                       collided=pygame.sprite.Rect.colliderect)
-            if pe_collision:
-                pe_collision[0].damaged += 1
-                self.player.damaged += 1
-                print("Player health =", self.player.health)
-                print(pe_collision, "health:", pe_collision[0].health)
-                if self.player.health == self.player.damaged:  # TODO: Explosion or flashing or something? Respawn?
-                    self.player.lives -= 1
-                    self.player.x = 100
-                    self.player.y = 100
-                    self.player.gun_str = 1
-                    self.player.damaged = 0
-
-                if pe_collision[0].health == pe_collision[0].damaged:
-                    pe_collision[0].kill()
-
-                # TODO: Game over screen?
-                if self.player.lives <= 0:
-                    counter = 500
-                    while counter > 0:
-                        font = pygame.font.SysFont('comicsans', 100, True)
-                        go_txt = font.render("GAME OVER!", 1, (0, 255, 0))
-                        self.screen.blit(go_txt, (375, 300))
-                        score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
-                        self.screen.blit(score_txt, (375, 400))
-                        counter -= 1
-                        print("Counter =", counter)
-                        pygame.display.update()
-                        self.redraw_game_window()
-
-                    self.player.kill()
-                    self.run = False
-
-            # Projectile-enemy collision detection
-            if self.bullets:
-                for bullet in self.bullets:
-                    # bullet collision detection
-                    collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
-                    if collision:
-                        self.score += 1
-                        collision[0].damaged += (self.player.gun_str)
-                        print(collision[0], "health =", collision[0].health)
-                        if collision[0].damaged == collision[0].health:
-                            collision[0].kill()
-
-                        self.bullets.remove(bullet)
-                        self.world.remove(bullet)
-
-                    if bullet.rect.x > self.screen_width or bullet.rect.x < 0:
-                        self.bullets.remove(bullet)
-                        self.world.remove(bullet)
+            # Collision detection
+            self.detect_collision()
 
             # Movement
             self.player.vdir = vertical_direction
@@ -245,6 +199,61 @@ class ControlManager(object):
             if self.key_state[pygame.K_ESCAPE]:
                 self.run = False
 
+    def detect_collision(self):
+        # Player-enemy collision detection:
+        pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False,
+                                                   collided=pygame.sprite.Rect.colliderect)
+        if pe_collision:
+            pe_collision[0].damaged += 1
+            self.player.damaged += 1
+            print("Player health =", self.player.health)
+            print(pe_collision, "health:", pe_collision[0].health)
+            if self.player.health <= self.player.damaged:  # TODO: Explosion or flashing or something? Respawn?
+                self.player.lives -= 1
+                self.player.x = 100
+                self.player.y = 100
+                self.player.gun_str = 1
+                self.player.damaged = 0
+
+            if pe_collision[0].health <= pe_collision[0].damaged:
+                pe_collision[0].kill()
+
+            # TODO: Game over screen?
+            if self.player.lives <= 0:
+                counter = 500
+                while counter > 0:
+                    font = pygame.font.SysFont('comicsans', 100, True)
+                    go_txt = font.render("GAME OVER!", 1, (0, 255, 0))
+                    self.screen.blit(go_txt, (375, 300))
+                    score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
+                    self.screen.blit(score_txt, (375, 400))
+                    counter -= 1
+                    print("Counter =", counter)
+                    pygame.display.update()
+                    self.redraw_game_window()
+
+                self.player.kill()
+                self.run = False
+
+        # Projectile-enemy collision detection
+        if self.bullets:
+            for bullet in self.bullets:
+                # bullet collision detection
+                collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
+                if collision:
+                    self.score += 1
+                    collision[0].damaged += (self.player.gun_str)
+                    print(collision[0], "health =", collision[0].health)
+                    if collision[0].damaged >= collision[0].health:
+                        collision[0].kill()
+
+                    self.bullets.remove(bullet)
+                    self.world.remove(bullet)
+
+                if bullet.rect.x > self.screen_width or bullet.rect.x < 0:
+                    self.bullets.remove(bullet)
+                    self.world.remove(bullet)
+
     def parse_key_state(self):
         """Parses pressed keys"""
         # Quit
@@ -274,6 +283,9 @@ class ControlManager(object):
     def redraw_game_window(self):
         """redraw_game_window function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
+
+        # TODO: IDEA! Assign labels using a lambda function based on y position to determine render order
+
         black = (0, 0, 0)
 
         # Clear screen
@@ -315,39 +327,70 @@ class ControlManager(object):
 
             # Add enemies to HUD tracker
             # TODO: Create enemy subclass
-            if not isinstance(entity, Player) and not isinstance(entity, Projectile):
+            if not isinstance(entity, Projectile):
                 self.tracker.push(entity)
 
-        # HUD Displays ################################################
-        # Draw Player scoreboard
-        font1 = pygame.font.SysFont('comicsans', 45, True)
-        text = font1.render('Score: ' + str(self.score), 1, (0, 0, 0))
-        self.screen.blit(text, (390, 10))
-
-        # Draw Player level and lives tracker
-        text2 = font1.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
-        self.screen.blit(text2, (600, 10))
-        lvl_txt = font1.render("Level: " + str(self.current_level), 1, (0, 0, 0))
-        self.screen.blit(lvl_txt, (650, 50))
-
-        # Draw Player Health
-        font2 = pygame.font.SysFont('comicsans', 25, True)
-        health_txt = font2.render("Player Health: " + str(self.player.health - self.player.damaged), 1, (0, 255, 0))
-        self.screen.blit(health_txt, (25, 25))
-
-        # Draw projectile detail
-        gun_str = font1.render("Gun Strength: " + str(self.player.gun_str), 1, (0, 0, 0))
-        self.screen.blit(gun_str, (1000, 10))
-
-        # TODO: Draw tracker
-        #   1. while stack is not empty: pop enemy
-        #   2. Draw x,y on scaled down rectangle
-        #   3. ???
-        #   4. Profit
-        # TODO: ADD TO SEPARATE METHOD!
+        self.display_hud()
 
         # Update the main display
         pygame.display.update()
+
+    def display_hud(self):
+        """Update HUD components"""
+        black = (0, 0, 0)
+        white = (255, 255, 255)
+
+        # Clear HUD
+        self.hud.fill(black)
+
+        # draw borders
+        rect = self.hud.get_rect()
+        pygame.draw.rect(self.hud, white, rect, 3)
+
+        # Left screen: lives, health bar
+        left_x = self.screen_width // 32
+        #   Draw Player Health
+        # Custom Health bar at top left
+        pygame.draw.rect(self.hud, (255, 0, 0), (left_x, 15, self.player.health, 20))
+        pygame.draw.rect(self.hud, (0, 255, 0), (left_x, 15, (self.player.health - self.player.damaged), 20))
+
+        #   Health counter
+        health_txt = self.hud_font.render("Health: " + str(self.player.health - self.player.damaged), 1, white)
+        self.hud.blit(health_txt, (left_x, 40))
+
+        #   Draw Player lives
+        # text = self.hud_font.render('Lives: ' + str(self.player.lives), 1, (0, 0, 0))
+        # self.hud.blit(text, (left_x, 60))
+        offset = 0
+        for i in range(self.player.lives):
+            self.hud.blit(self.player.icon, (left_x + offset - 10, 60))
+            offset += 35
+
+        # Middle screen: Enemy tracker
+        pygame.draw.rect(self.hud, white, (rect.x + self.screen_width//4, rect.y, 2 * rect.width//4, rect.height), 3)
+        while not self.tracker.empty():
+            e = self.tracker.pop()
+            x, y = e.rect.topleft
+
+            new_x = (x * (2 * rect.width // 4) // self.screen_width) + self.screen_width // 4
+            new_y = (y * 100) / self.screen_height
+            t = pygame.rect.Rect(new_x, new_y - 10, 10, 10)
+            pygame.draw.rect(self.hud, e.rgb, t)
+
+        # Right screen: score, gun strength, level
+        #   Draw Player scoreboard
+        right_x = (3 * self.screen_width // 4) + self.screen_width // 16
+        text = self.hud_font.render("Score: " + str(self.score).zfill(6), 1, white)
+        self.hud.blit(text, (right_x, 60))
+        #   Level
+        lvl_txt = self.hud_font.render("Level: " + str(self.current_level), 1, white)
+        self.hud.blit(lvl_txt, (right_x, 40))
+        #   Draw projectile detail
+        gun_str = self.hud_font.render("Power: " + str(self.player.gun_str), 1, white)
+        self.hud.blit(gun_str, (right_x, 20))
+
+        # Blit hud to screen
+        self.screen.blit(self.hud, (0, 0))
 
 
 class Background(object):
@@ -427,6 +470,7 @@ class Player(Entity):
         self.vdir = 0
         self.hdir = 0
         self.firing = 0
+        self.rgb = (255, 255, 255)
 
         # Speed related ##################################################################
         self.max_speed = 7
@@ -446,22 +490,14 @@ class Player(Entity):
         self.frame_duration = 33
         # Creates iterable list of images/frames
         self.frames = self.sheet.get_images()
-
         # Set transparency for image (white)
         for frame in self.frames:
             frame.set_colorkey((255, 255, 255))
 
+        self.icon = pygame.transform.scale(self.frames[2], (50, 30))
         self.frameCycle = cycle(self.frames)
         self.frame = next(self.frameCycle)
         self.rect = self.frame.get_rect()
-
-    def draw(self, surface, target):
-        """Blit the player to the window"""
-        super().draw(surface, target)
-
-        # Custom Health bar at top left
-        pygame.draw.rect(surface, (255, 0, 0), (25, 5, self.health, 20))
-        pygame.draw.rect(surface, (0, 255, 0), (25, 5, (self.health - self.damaged), 20))
 
     def move(self):
         """
