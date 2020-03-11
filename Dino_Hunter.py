@@ -38,12 +38,12 @@ class Camera(object):
         dx = dx % self.width
 
         # Bind y coordinate
-        if 0 <= target.y <= self.height - target.rect.height:
+        if 101 <= target.y <= self.height - target.rect.height:
             target.y = target.y
         elif target.y > self.height - target.rect.height:
             target.y = self.height - target.rect.height
         else:
-            target.y = 0
+            target.y = 101
 
         target.rect = pygame.Rect(dx, target.y, target.rect.height, target.rect.width)
 
@@ -74,6 +74,8 @@ class ControlManager(object):
         # Background
         self.bg = Background(width=self.screen_width, height=screen_height)
 
+        self.determine_layer = Utilities.determine_layer(self.screen_height)
+
         # Core settings
         self.clock = pygame.time.Clock()
         self.camera = Camera(Utilities.complex_camera, self.screen_width, self.screen_height)
@@ -81,8 +83,15 @@ class ControlManager(object):
         self.key_state = None
         self.run = True
 
+        # HUD surface
+        self.hud = pygame.Surface((self.screen_width, 100))
+        self.hud_font = pygame.font.Font(os.path.join("util", "PressStart2P-Regular.ttf"), 15)
+
+        self.mob_limit = 10
+        self.mob_queue = FIFO.FIFO()
+
         # Sprite trackers
-        self.world = pygame.sprite.Group()
+        self.world = pygame.sprite.LayeredUpdates()
         self.enemies = pygame.sprite.Group()
         self.players = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
@@ -95,11 +104,8 @@ class ControlManager(object):
         self.create_enemies()
 
         # Add sprites to "global" tracker
-        self.world.add(self.player)
+        self.world.add(self.player, layer=self.player.layer)
         self.players.add(self.player)
-
-        for e in self.enemies:
-            self.world.add(e)
 
         # score / lives settings
         self.score = 0
@@ -109,19 +115,14 @@ class ControlManager(object):
         base = (2, 4, 3)
         self.current_level += 1
         if self.current_level == 0:
-            for i in range(1):
-                self.enemies.add(TRex(self.screen_width, self.screen_height))
-            for i in range(1):
-                self.enemies.add(Raptor(self.screen_width, self.screen_height))
-            for i in range(1):
-                self.enemies.add(Ptero(self.screen_width, self.screen_height))
+                self.mob_queue.add(TRex(self.screen_width, self.screen_height))
+                self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
+                self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
         else:
             for i in range(base[0] * self.current_level):
-                self.enemies.add(TRex(self.screen_width, self.screen_height))
-            for i in range(base[1] * self.current_level):
-                self.enemies.add(Raptor(self.screen_width, self.screen_height))
-            for i in range(base[2] * self.current_level):
-                self.enemies.add(Ptero(self.screen_width, self.screen_height))
+                self.mob_queue.add(TRex(self.screen_width, self.screen_height))
+                self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
+                self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
 
     def main_loop(self):
         """This loop represents all the actions that need to be taken during one cycle:
@@ -145,59 +146,17 @@ class ControlManager(object):
 
             horizontal_direction, vertical_direction, firing = self.parse_key_state()
 
-            # Player-enemy collision detection:
-            pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False,
-                                                       collided=pygame.sprite.Rect.colliderect)
-            if pe_collision:
-                pe_collision[0].damaged += 1
-                self.player.damaged += 1
-                print("Player health =", self.player.health)
-                print(pe_collision, "health:", pe_collision[0].health)
-                if self.player.health == self.player.damaged:  # TODO: Explosion or flashing or something? Respawn?
-                    self.player.lives -= 1
-                    self.player.x = 100
-                    self.player.y = 100
-                    self.player.gun_str = 1
-                    self.player.damaged = 0
+            # Mob spawn
+            while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
+                e = self.mob_queue.remove()
+                # Adjust layer depending on y value
+                e.layer = self.determine_layer(e.y)
+                print(e.y, e.layer, e)
+                self.enemies.add(e)
+                self.world.add(e, layer=e.layer)
 
-                if pe_collision[0].health == pe_collision[0].damaged:
-                    pe_collision[0].kill()
-
-                # TODO: Game over screen?
-                if self.player.lives <= 0:
-                    counter = 500
-                    while counter > 0:
-                        font = pygame.font.SysFont('comicsans', 100, True)
-                        go_txt = font.render("GAME OVER!", 1, (0, 255, 0))
-                        self.screen.blit(go_txt, (375, 300))
-                        score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
-                        self.screen.blit(score_txt, (375, 400))
-                        counter -= 1
-                        print("Counter =", counter)
-                        pygame.display.update()
-                        self.redraw_game_window()
-
-                    self.player.kill()
-                    self.run = False
-
-            # Projectile-enemy collision detection
-            if self.bullets:
-                for bullet in self.bullets:
-                    # bullet collision detection
-                    collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
-                    if collision:
-                        self.score += 1
-                        collision[0].damaged += (self.player.gun_str)
-                        print(collision[0], "health =", collision[0].health)
-                        if collision[0].damaged == collision[0].health:
-                            collision[0].kill()
-
-                        self.bullets.remove(bullet)
-                        self.world.remove(bullet)
-
-                    if bullet.rect.x > self.screen_width or bullet.rect.x < 0:
-                        self.bullets.remove(bullet)
-                        self.world.remove(bullet)
+            # Collision detection
+            self.detect_collision()
 
             # Movement
             self.player.vdir = vertical_direction
@@ -212,7 +171,7 @@ class ControlManager(object):
             self.camera.update(self.player)
 
             # Advance to next level
-            if not self.enemies:
+            if not self.enemies and self.mob_queue.empty():
                 counter = 100
                 while counter > 0:
                     # Draw Level Complete
@@ -245,6 +204,61 @@ class ControlManager(object):
             if self.key_state[pygame.K_ESCAPE]:
                 self.run = False
 
+    def detect_collision(self):
+        # Player-enemy collision detection:
+        pe_collision = pygame.sprite.spritecollide(sprite=self.player.rect, group=self.enemies, dokill=False,
+                                                   collided=pygame.sprite.Rect.colliderect)
+        if pe_collision:
+            pe_collision[0].damaged += 1
+            self.player.damaged += 1
+            print("Player health =", self.player.health)
+            print(pe_collision, "health:", pe_collision[0].health)
+            if self.player.health <= self.player.damaged:  # TODO: Explosion or flashing or something? Respawn?
+                self.player.lives -= 1
+                self.player.x = 100
+                self.player.y = 100
+                self.player.gun_str = 1
+                self.player.damaged = 0
+
+            if pe_collision[0].health <= pe_collision[0].damaged:
+                pe_collision[0].kill()
+
+            # TODO: Game over screen?
+            if self.player.lives <= 0:
+                counter = 500
+                while counter > 0:
+                    font = pygame.font.SysFont('comicsans', 100, True)
+                    go_txt = font.render("GAME OVER!", 1, (0, 255, 0))
+                    self.screen.blit(go_txt, (375, 300))
+                    score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
+                    self.screen.blit(score_txt, (375, 400))
+                    counter -= 1
+                    print("Counter =", counter)
+                    pygame.display.update()
+                    self.redraw_game_window()
+
+                self.player.kill()
+                self.run = False
+
+        # Projectile-enemy collision detection
+        if self.bullets:
+            for bullet in self.bullets:
+                # bullet collision detection
+                collision = pygame.sprite.spritecollide(sprite=bullet, group=self.enemies, dokill=False)
+                if collision:
+                    self.score += 1
+                    collision[0].damaged += (self.player.gun_str)
+                    print(collision[0], "health =", collision[0].health)
+                    if collision[0].damaged >= collision[0].health:
+                        collision[0].kill()
+
+                    self.bullets.remove(bullet)
+                    self.world.remove(bullet)
+
+                if bullet.rect.x > self.screen_width or bullet.rect.x < 0:
+                    self.bullets.remove(bullet)
+                    self.world.remove(bullet)
+
     def parse_key_state(self):
         """Parses pressed keys"""
         # Quit
@@ -274,6 +288,7 @@ class ControlManager(object):
     def redraw_game_window(self):
         """redraw_game_window function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
+
         black = (0, 0, 0)
 
         # Clear screen
@@ -291,7 +306,7 @@ class ControlManager(object):
                 bullet = Projectile(round(self.screen_width // 2),
                                     round(self.player.rect.center[1] + self.player.height // 4), 2,
                                     color=(255, 255, 255), facing=self.player.facing,
-                                    velocity=int(3), dx=self.player.hdir)
+                                    velocity=int(3), dx=self.player.angle)
 
                 # Adds bullet to bullets sprite group
                 self.bullets.add(bullet)
@@ -314,40 +329,71 @@ class ControlManager(object):
                 entity.draw(self.screen, entity)
 
             # Add enemies to HUD tracker
-            # TODO: Create enemy subclass
-            if not isinstance(entity, Player) and not isinstance(entity, Projectile):
+            if not isinstance(entity, Projectile):
                 self.tracker.push(entity)
 
-        # HUD Displays ################################################
-        # Draw Player scoreboard
-        font1 = pygame.font.SysFont('comicsans', 45, True)
-        text = font1.render('Score: ' + str(self.score), 1, (0, 0, 0))
-        self.screen.blit(text, (390, 10))
-
-        # Draw Player level and lives tracker
-        text2 = font1.render('Player Lives: ' + str(self.player.lives), 1, (0, 255, 0))
-        self.screen.blit(text2, (600, 10))
-        lvl_txt = font1.render("Level: " + str(self.current_level), 1, (0, 0, 0))
-        self.screen.blit(lvl_txt, (650, 50))
-
-        # Draw Player Health
-        font2 = pygame.font.SysFont('comicsans', 25, True)
-        health_txt = font2.render("Player Health: " + str(self.player.health - self.player.damaged), 1, (0, 255, 0))
-        self.screen.blit(health_txt, (25, 25))
-
-        # Draw projectile detail
-        gun_str = font1.render("Gun Strength: " + str(self.player.gun_str), 1, (0, 0, 0))
-        self.screen.blit(gun_str, (1000, 10))
-
-        # TODO: Draw tracker
-        #   1. while stack is not empty: pop enemy
-        #   2. Draw x,y on scaled down rectangle
-        #   3. ???
-        #   4. Profit
-        # TODO: ADD TO SEPARATE METHOD!
+        self.display_hud()
 
         # Update the main display
         pygame.display.update()
+
+    def display_hud(self):
+        """Update HUD components"""
+        black = (0, 0, 0)
+        white = (255, 255, 255)
+
+        # Clear HUD
+        self.hud.fill(black)
+
+        # draw borders
+        rect = self.hud.get_rect()
+        pygame.draw.rect(self.hud, white, rect, 3)
+
+        # Left screen: lives, health bar
+        left_x = self.screen_width // 32
+        #   Draw Player Health
+        # Custom Health bar at top left
+        pygame.draw.rect(self.hud, (255, 0, 0), (left_x, 15, self.player.health, 20))
+        pygame.draw.rect(self.hud, (0, 255, 0), (left_x, 15, (self.player.health - self.player.damaged), 20))
+
+        #   Health counter
+        health_txt = self.hud_font.render("Health: " + str(self.player.health - self.player.damaged), 1, white)
+        self.hud.blit(health_txt, (left_x, 40))
+
+        #   Draw Player lives
+        # text = self.hud_font.render('Lives: ' + str(self.player.lives), 1, (0, 0, 0))
+        # self.hud.blit(text, (left_x, 60))
+        offset = 0
+        for i in range(self.player.lives):
+            self.hud.blit(self.player.icon, (left_x + offset - 10, 60))
+            offset += 35
+
+        # Middle screen: Enemy tracker
+        pygame.draw.rect(self.hud, white, (rect.x + self.screen_width // 4, rect.y, 2 * rect.width // 4, rect.height),
+                         3)
+        while not self.tracker.empty():
+            e = self.tracker.pop()
+            x, y = e.rect.topleft
+
+            new_x = (x * (2 * rect.width // 4) // self.screen_width) + self.screen_width // 4
+            new_y = (y * 100) / self.screen_height
+            t = pygame.rect.Rect(new_x, new_y - 10, 10, 10)
+            pygame.draw.rect(self.hud, e.rgb, t)
+
+        # Right screen: score, gun strength, level
+        #   Draw Player scoreboard
+        right_x = (3 * self.screen_width // 4) + self.screen_width // 16
+        text = self.hud_font.render("Score: " + str(self.score).zfill(6), 1, white)
+        self.hud.blit(text, (right_x, 60))
+        #   Level
+        lvl_txt = self.hud_font.render("Level: " + str(self.current_level), 1, white)
+        self.hud.blit(lvl_txt, (right_x, 40))
+        #   Draw projectile detail
+        gun_str = self.hud_font.render("Power: " + str(self.player.gun_str), 1, white)
+        self.hud.blit(gun_str, (right_x, 20))
+
+        # Blit hud to screen
+        self.screen.blit(self.hud, (0, 0))
 
 
 class Background(object):
@@ -427,6 +473,7 @@ class Player(Entity):
         self.vdir = 0
         self.hdir = 0
         self.firing = 0
+        self.rgb = (255, 255, 255)
 
         # Speed related ##################################################################
         self.max_speed = 7
@@ -437,6 +484,8 @@ class Player(Entity):
         self.facing = True
         self.old_horizontalDirection = -1
 
+        self.layer = 5
+
         # Animation #####################################################################
         # Load player sprite sheet
         self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1,
@@ -446,22 +495,15 @@ class Player(Entity):
         self.frame_duration = 33
         # Creates iterable list of images/frames
         self.frames = self.sheet.get_images()
-
         # Set transparency for image (white)
         for frame in self.frames:
             frame.set_colorkey((255, 255, 255))
 
+        self.icon = pygame.transform.scale(self.frames[2], (50, 30))
         self.frameCycle = cycle(self.frames)
         self.frame = next(self.frameCycle)
         self.rect = self.frame.get_rect()
-
-    def draw(self, surface, target):
-        """Blit the player to the window"""
-        super().draw(surface, target)
-
-        # Custom Health bar at top left
-        pygame.draw.rect(surface, (255, 0, 0), (25, 5, self.health, 20))
-        pygame.draw.rect(surface, (0, 255, 0), (25, 5, (self.health - self.damaged), 20))
+        self.angle = 0
 
     def move(self):
         """
@@ -478,6 +520,7 @@ class Player(Entity):
             self.old_horizontalDirection = self.hdir
 
             # Case 3: Increase speed until max
+            self.angle = 10
             if self.vel < self.max_speed:
                 self.vel += 0.25
             else:
@@ -485,9 +528,10 @@ class Player(Entity):
 
         # Case 1: reset horizontal speed
         else:
+            self.angle = -10
             if self.vel > 0:
                 self.vel -= 0.25
-                hdir = self.old_horizontalDirection
+                self.hdir = self.old_horizontalDirection
             else:
                 self.vel = 0
 
@@ -509,6 +553,14 @@ class Player(Entity):
         # Update self.rectangle with new coords
         self.rect = pygame.Rect(self.x, self.y, 70, 90)
 
+    def draw(self, surface, target):
+        image = pygame.transform.rotate(self.frame, self.angle)
+
+        if self.facing:
+            surface.blit(image, target)
+        else:
+            surface.blit(pygame.transform.flip(image, True, False), target)
+
 
 class Enemy(Entity):
     def __init__(self, spritesheet, rows, cols, duration):
@@ -516,6 +568,7 @@ class Enemy(Entity):
         self.end = None
         self.path = None
         self.initialize_animation(spritesheet, rows, cols, duration)
+        self.layer = 1
 
     def initialize_animation(self, filename, rows, cols, duration):
         # Animation #####################################################################
@@ -621,20 +674,25 @@ class Projectile(Entity):
         self.rect = pygame.Rect(self.x - radius, self.y - radius, radius * 2, radius * 2)
         self.facing = facing
         self.dx = dx
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", 'bullets.png'), rows=1,
+                                           columns=2)
+        self.frames = self.sheet.get_images()
+        for frame in self.frames:
+            frame.set_colorkey((255, 255, 255))
 
         # VECTOR MATH!
         self.offset = pygame.math.Vector2(40, 0).rotate(math.radians(45))
 
         # Change bullet vector based on direction and forward movement
         if self.facing:
-            if self.dx:
+            if self.dx > 0:
                 self.v = pygame.math.Vector2(self.vel, -2).rotate(0) * 9
                 self.pos = pygame.math.Vector2(self.rect.x - 20, self.rect.y) + self.offset
             else:
                 self.v = pygame.math.Vector2(self.vel, 0).rotate(0) * 9
                 self.pos = pygame.math.Vector2(self.rect.x - 17, self.rect.y + 12) + self.offset
         else:
-            if self.dx:
+            if self.dx > 0:
                 self.v = pygame.math.Vector2(-self.vel, -2).rotate(0) * 9
                 self.pos = pygame.math.Vector2(self.rect.x - 30, self.rect.y) + self.offset
             else:
@@ -645,7 +703,8 @@ class Projectile(Entity):
         return NotImplemented
 
     def draw(self, surface, target):
-        pygame.draw.circle(surface, self.color, self.rect.center, self.radius)
+        x = random.randint(0, 1)
+        surface.blit(self.frames[x], self.rect.center)
 
     def move(self):
         self.pos -= self.v
