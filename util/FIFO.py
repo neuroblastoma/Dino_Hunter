@@ -66,28 +66,3 @@ class FIFO(object):
         '''Use __str__() method in LinkedList() to display FIFO queue. '''
         return self.llist.__str__()
 
-
-##########################################################
-#testing-related
-def test():
-    fifo = FIFO()
-    print(fifo)
-    fifo.add(0)
-    fifo.add(5)
-    fifo.add(10)
-    print(fifo)
-    print(fifo.empty())
-    fifo.add(-1)
-    fifo.add('ab')
-    print(fifo)
-    print(fifo.remove())
-    print(fifo)
-
-    for i in range(10):
-        print(fifo.remove())
-    print(fifo)
-    print(fifo.empty())
-
-if __name__ == '__main__':
-    test()
-

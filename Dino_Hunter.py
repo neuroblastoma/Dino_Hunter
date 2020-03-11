@@ -85,6 +85,9 @@ class ControlManager(object):
         self.hud = pygame.Surface((self.screen_width, 100))
         self.hud_font = pygame.font.Font(os.path.join("util", "PressStart2P-Regular.ttf"), 15)
 
+        self.mob_limit = 10
+        self.mob_queue = FIFO.FIFO()
+
         # Sprite trackers
         self.world = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
@@ -102,31 +105,22 @@ class ControlManager(object):
         self.world.add(self.player)
         self.players.add(self.player)
 
-        for e in self.enemies:
-            self.world.add(e)
-
         # score / lives settings
         self.score = 0
         self.lives = 3
 
     def create_enemies(self):
-        # TODO: Create a FIFO queue to handle larger sets of enemies
         base = (2, 4, 3)
         self.current_level += 1
         if self.current_level == 0:
-            for i in range(1):
-                self.enemies.add(TRex(self.screen_width, self.screen_height))
-            for i in range(1):
-                self.enemies.add(Raptor(self.screen_width, self.screen_height))
-            for i in range(1):
-                self.enemies.add(Ptero(self.screen_width, self.screen_height))
+                self.mob_queue.add(TRex(self.screen_width, self.screen_height))
+                self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
+                self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
         else:
             for i in range(base[0] * self.current_level):
-                self.enemies.add(TRex(self.screen_width, self.screen_height))
-            for i in range(base[1] * self.current_level):
-                self.enemies.add(Raptor(self.screen_width, self.screen_height))
-            for i in range(base[2] * self.current_level):
-                self.enemies.add(Ptero(self.screen_width, self.screen_height))
+                self.mob_queue.add(TRex(self.screen_width, self.screen_height))
+                self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
+                self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
 
     def main_loop(self):
         """This loop represents all the actions that need to be taken during one cycle:
@@ -150,6 +144,12 @@ class ControlManager(object):
 
             horizontal_direction, vertical_direction, firing = self.parse_key_state()
 
+            # Mob spawn
+            while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
+                e = self.mob_queue.remove()
+                self.enemies.add(e)
+                self.world.add(e)
+
             # Collision detection
             self.detect_collision()
 
@@ -166,7 +166,7 @@ class ControlManager(object):
             self.camera.update(self.player)
 
             # Advance to next level
-            if not self.enemies:
+            if not self.enemies and self.mob_queue.empty():
                 counter = 100
                 while counter > 0:
                     # Draw Level Complete
@@ -303,7 +303,7 @@ class ControlManager(object):
                 bullet = Projectile(round(self.screen_width // 2),
                                     round(self.player.rect.center[1] + self.player.height // 4), 2,
                                     color=(255, 255, 255), facing=self.player.facing,
-                                    velocity=int(3), dx=self.player.hdir)
+                                    velocity=int(3), dx=self.player.angle)
 
                 # Adds bullet to bullets sprite group
                 self.bullets.add(bullet)
@@ -367,7 +367,8 @@ class ControlManager(object):
             offset += 35
 
         # Middle screen: Enemy tracker
-        pygame.draw.rect(self.hud, white, (rect.x + self.screen_width//4, rect.y, 2 * rect.width//4, rect.height), 3)
+        pygame.draw.rect(self.hud, white, (rect.x + self.screen_width // 4, rect.y, 2 * rect.width // 4, rect.height),
+                         3)
         while not self.tracker.empty():
             e = self.tracker.pop()
             x, y = e.rect.topleft
@@ -498,6 +499,7 @@ class Player(Entity):
         self.frameCycle = cycle(self.frames)
         self.frame = next(self.frameCycle)
         self.rect = self.frame.get_rect()
+        self.angle = 0
 
     def move(self):
         """
@@ -514,6 +516,7 @@ class Player(Entity):
             self.old_horizontalDirection = self.hdir
 
             # Case 3: Increase speed until max
+            self.angle = 10
             if self.vel < self.max_speed:
                 self.vel += 0.25
             else:
@@ -521,9 +524,10 @@ class Player(Entity):
 
         # Case 1: reset horizontal speed
         else:
+            self.angle = -10
             if self.vel > 0:
                 self.vel -= 0.25
-                hdir = self.old_horizontalDirection
+                self.hdir = self.old_horizontalDirection
             else:
                 self.vel = 0
 
@@ -544,6 +548,14 @@ class Player(Entity):
 
         # Update self.rectangle with new coords
         self.rect = pygame.Rect(self.x, self.y, 70, 90)
+
+    def draw(self, surface, target):
+        image = pygame.transform.rotate(self.frame, self.angle)
+
+        if self.facing:
+            surface.blit(image, target)
+        else:
+            surface.blit(pygame.transform.flip(image, True, False), target)
 
 
 class Enemy(Entity):
@@ -657,20 +669,25 @@ class Projectile(Entity):
         self.rect = pygame.Rect(self.x - radius, self.y - radius, radius * 2, radius * 2)
         self.facing = facing
         self.dx = dx
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", 'bullets.png'), rows=1,
+                                           columns=2)
+        self.frames = self.sheet.get_images()
+        for frame in self.frames:
+            frame.set_colorkey((255, 255, 255))
 
         # VECTOR MATH!
         self.offset = pygame.math.Vector2(40, 0).rotate(math.radians(45))
 
         # Change bullet vector based on direction and forward movement
         if self.facing:
-            if self.dx:
+            if self.dx > 0:
                 self.v = pygame.math.Vector2(self.vel, -2).rotate(0) * 9
                 self.pos = pygame.math.Vector2(self.rect.x - 20, self.rect.y) + self.offset
             else:
                 self.v = pygame.math.Vector2(self.vel, 0).rotate(0) * 9
                 self.pos = pygame.math.Vector2(self.rect.x - 17, self.rect.y + 12) + self.offset
         else:
-            if self.dx:
+            if self.dx > 0:
                 self.v = pygame.math.Vector2(-self.vel, -2).rotate(0) * 9
                 self.pos = pygame.math.Vector2(self.rect.x - 30, self.rect.y) + self.offset
             else:
@@ -681,7 +698,8 @@ class Projectile(Entity):
         return NotImplemented
 
     def draw(self, surface, target):
-        pygame.draw.circle(surface, self.color, self.rect.center, self.radius)
+        x = random.randint(0, 1)
+        surface.blit(self.frames[x], self.rect.center)
 
     def move(self):
         self.pos -= self.v
