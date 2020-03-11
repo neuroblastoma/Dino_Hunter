@@ -150,7 +150,7 @@ class ControlManager(object):
             while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
                 e = self.mob_queue.remove()
                 # Adjust layer depending on y value
-                e.layer = self.determine_layer(e.y)
+                e.layer = self.determine_layer(e.y + e.height)
                 print(e.y, e.layer, e)
                 self.enemies.add(e)
                 self.world.add(e, layer=e.layer)
@@ -450,10 +450,14 @@ class Entity(pygame.sprite.Sprite):
             self.frame = next(self.frameCycle)
 
     def draw(self, surface, target):
+        # Use this to see hit boxes
+        # pygame.draw.rect(surface, self.rgb, self.rect, 2)
         if self.facing:
             surface.blit(self.frame, target)
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), target)
+
+
 
     def move(self, **kwargs):
         return NotImplemented
@@ -632,8 +636,8 @@ class Raptor(Enemy):
         self.health = 15
         self.x = random.randrange(0, screen_width - 61)
         self.y = random.randrange(screen_height - 200, screen_height - 100)
-        self.width = 90
-        self.height = 150
+        self.width = 150
+        self.height = 90
         self.vel = random.uniform(3, 5)
 
         self.rgb = (255, 165, 0)
