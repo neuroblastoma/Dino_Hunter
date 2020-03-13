@@ -14,6 +14,7 @@ import pygame
 import os
 import math
 import random
+import thorpy
 from itertools import cycle
 from util import Utilities
 from util import FIFO
@@ -56,13 +57,16 @@ class Camera(object):
 
 class ControlManager(object):
     """Class for tracking game states & managing event loop"""
+    BLACK = (0, 0, 0)
+    WHITE = (255, 255, 255)
+    FPS = 60
 
     def __init__(self, caption, screen_width=1500, screen_height=750):
         """Initialize the display and prepare game objects"""
         # Screen settings
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.fps = 60
+        self.fps = ControlManager.FPS
         self.current_level = -1
 
         # Screen attributes
@@ -73,7 +77,6 @@ class ControlManager(object):
 
         # Background
         self.bg = Background(width=self.screen_width, height=screen_height)
-
         self.determine_layer = Utilities.determine_layer(self.screen_height)
 
         # Core settings
@@ -107,102 +110,106 @@ class ControlManager(object):
         self.world.add(self.player, layer=self.player.layer)
         self.players.add(self.player)
 
-        # score / lives settings
+        # Score
         self.score = 0
-        self.lives = 3
 
     def create_enemies(self):
         base = (2, 4, 3)
         self.current_level += 1
         if self.current_level == 0:
-                self.mob_queue.add(TRex(self.screen_width, self.screen_height))
-                self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
-                self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
+            self.mob_queue.add(TRex(self.screen_width, self.screen_height))
+            self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
+            self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
         else:
             for i in range(base[0] * self.current_level):
                 self.mob_queue.add(TRex(self.screen_width, self.screen_height))
                 self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
                 self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
 
-    def main_loop(self):
+    def main_loop(self, menufunc):
         """This loop represents all the actions that need to be taken during one cycle:
                 1. Update world based on what user did
                 2. Clear screen w/ win.fill(black)
                 3. Redraw the graphics for the world
                 4. Call pygame.display.update to update graphics on screen.
         """
+        paused = False
+
         while self.run:
             # Check events
             for event in pygame.event.get():
                 # If user clicks red X, toggle run
                 if event.type == pygame.QUIT:
                     self.run = False
-
-            # Update time delta
-            self.dt = self.clock.tick(self.fps)
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                    paused = not paused
+                    paused_txt = self.hud_font.render("-- PAUSED --", 1, (255, 0, 0))
+                    self.screen.blit(paused_txt, self.bg.mid_rect.center)
+                    pygame.display.update()
 
             # Update key state
             self.key_state = pygame.key.get_pressed()
-
             horizontal_direction, vertical_direction, firing = self.parse_key_state()
 
-            # Mob spawn
-            while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
-                e = self.mob_queue.remove()
-                # Adjust layer depending on y value
-                e.layer = self.determine_layer(e.y + e.height)
-                print(e.y, e.layer, e)
-                self.enemies.add(e)
-                self.world.add(e, layer=e.layer)
+            if not paused:
+                # Update time delta
+                self.dt = self.clock.tick(self.fps)
 
-            # Collision detection
-            self.detect_collision()
+                # Mob spawn
+                while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
+                    e = self.mob_queue.remove()
+                    # Adjust layer depending on y value
+                    e.layer = self.determine_layer(e.y + e.height)
+                    self.enemies.add(e)
+                    self.world.add(e, layer=e.layer)
 
-            # Movement
-            self.player.vdir = vertical_direction
-            self.player.hdir = horizontal_direction
-            self.player.firing = firing
-            self.player.move()
+                # Collision detection
+                self.detect_collision()
 
-            # Clamp player's x coordinate:
-            self.player.x = self.player.x % self.screen_width
+                # Movement
+                self.player.vdir = vertical_direction
+                self.player.hdir = horizontal_direction
+                self.player.firing = firing
+                self.player.move()
 
-            # Update camera
-            self.camera.update(self.player)
+                # Clamp player's x coordinate:
+                self.player.x = self.player.x % self.screen_width
 
-            # Advance to next level
-            if not self.enemies and self.mob_queue.empty():
-                counter = 100
-                while counter > 0:
-                    # Draw Level Complete
-                    font = pygame.font.SysFont('comicsans', 100, True)
-                    level_txt = font.render("LEVEL COMPLETE! " + str(counter // 10), 1, (0, 255, 0))
-                    self.screen.blit(level_txt, (375, 300))
-                    counter -= 1
-                    print("counter =", counter)
+                # Update camera
+                self.camera.update(self.player)
+
+                # Advance to next level
+                if not self.enemies and self.mob_queue.empty():
+                    counter = 100
+                    while counter > 0:
+                        # Draw Level Complete
+                        font = pygame.font.SysFont('comicsans', 100, True)
+                        level_txt = font.render("LEVEL COMPLETE! " + str(counter // 10), 1, (0, 255, 0))
+                        self.screen.blit(level_txt, (375, 300))
+                        counter -= 1
+                        self.player.rect.y = self.screen_height / 2
+                        self.player.rect.x = self.screen_width / 2
+                        pygame.display.update()
+                        self.redraw_game_window()
+
+                    # Reset player position
                     self.player.rect.y = self.screen_height / 2
                     self.player.rect.x = self.screen_width / 2
-                    pygame.display.update()
-                    self.redraw_game_window()
 
-                # Reset player position
-                self.player.rect.y = self.screen_height / 2
-                self.player.rect.x = self.screen_width / 2
+                    # Increase gun strength
+                    self.player.gun_str += 1
 
-                # Increase gun strength
-                self.player.gun_str += 1
+                    # Spawn new enemies
+                    self.create_enemies()
+                    for e in self.enemies:
+                        self.world.add(e)
 
-                # Spawn new enemies
-                self.create_enemies()
-                for e in self.enemies:
-                    self.world.add(e)
+                # TODO: Insert music here
 
-            # TODO: Insert music here
+                self.redraw_game_window()
 
-            self.redraw_game_window()
-
-            if self.key_state[pygame.K_ESCAPE]:
-                self.run = False
+        # Exit to main menu
+        menufunc.menu.blit_and_update()
 
     def detect_collision(self):
         # Player-enemy collision detection:
@@ -211,8 +218,6 @@ class ControlManager(object):
         if pe_collision:
             pe_collision[0].damaged += 1
             self.player.damaged += 1
-            print("Player health =", self.player.health)
-            print(pe_collision, "health:", pe_collision[0].health)
             if self.player.health <= self.player.damaged:  # TODO: Explosion or flashing or something? Respawn?
                 self.player.lives -= 1
                 self.player.x = 100
@@ -233,7 +238,6 @@ class ControlManager(object):
                     score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
                     self.screen.blit(score_txt, (375, 400))
                     counter -= 1
-                    print("Counter =", counter)
                     pygame.display.update()
                     self.redraw_game_window()
 
@@ -248,7 +252,6 @@ class ControlManager(object):
                 if collision:
                     self.score += 1
                     collision[0].damaged += (self.player.gun_str)
-                    print(collision[0], "health =", collision[0].health)
                     if collision[0].damaged >= collision[0].health:
                         collision[0].kill()
 
@@ -289,10 +292,8 @@ class ControlManager(object):
         """redraw_game_window function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
 
-        black = (0, 0, 0)
-
         # Clear screen
-        self.screen.fill(black)
+        self.screen.fill(ControlManager.BLACK)
 
         # Update background
         self.bg.move(self.camera.offsetState.x)
@@ -339,15 +340,13 @@ class ControlManager(object):
 
     def display_hud(self):
         """Update HUD components"""
-        black = (0, 0, 0)
-        white = (255, 255, 255)
 
         # Clear HUD
-        self.hud.fill(black)
+        self.hud.fill(ControlManager.BLACK)
 
         # draw borders
         rect = self.hud.get_rect()
-        pygame.draw.rect(self.hud, white, rect, 3)
+        pygame.draw.rect(self.hud, ControlManager.WHITE, rect, 3)
 
         # Left screen: lives, health bar
         left_x = self.screen_width // 32
@@ -357,7 +356,8 @@ class ControlManager(object):
         pygame.draw.rect(self.hud, (0, 255, 0), (left_x, 15, (self.player.health - self.player.damaged), 20))
 
         #   Health counter
-        health_txt = self.hud_font.render("Health: " + str(self.player.health - self.player.damaged), 1, white)
+        health_txt = self.hud_font.render("Health: " + str(self.player.health - self.player.damaged), 1,
+                                          ControlManager.WHITE)
         self.hud.blit(health_txt, (left_x, 40))
 
         #   Draw Player lives
@@ -369,8 +369,8 @@ class ControlManager(object):
             offset += 35
 
         # Middle screen: Enemy tracker
-        pygame.draw.rect(self.hud, white, (rect.x + self.screen_width // 4, rect.y, 2 * rect.width // 4, rect.height),
-                         3)
+        pygame.draw.rect(self.hud, ControlManager.WHITE, (rect.x + self.screen_width // 4, rect.y, 2 * rect.width // 4,
+                                                          rect.height), 3)
         while not self.tracker.empty():
             e = self.tracker.pop()
             x, y = e.rect.topleft
@@ -383,13 +383,13 @@ class ControlManager(object):
         # Right screen: score, gun strength, level
         #   Draw Player scoreboard
         right_x = (3 * self.screen_width // 4) + self.screen_width // 16
-        text = self.hud_font.render("Score: " + str(self.score).zfill(6), 1, white)
+        text = self.hud_font.render("Score: " + str(self.score).zfill(6), 1, ControlManager.WHITE)
         self.hud.blit(text, (right_x, 60))
         #   Level
-        lvl_txt = self.hud_font.render("Level: " + str(self.current_level), 1, white)
+        lvl_txt = self.hud_font.render("Level: " + str(self.current_level), 1, ControlManager.WHITE)
         self.hud.blit(lvl_txt, (right_x, 40))
         #   Draw projectile detail
-        gun_str = self.hud_font.render("Power: " + str(self.player.gun_str), 1, white)
+        gun_str = self.hud_font.render("Power: " + str(self.player.gun_str), 1, ControlManager.WHITE)
         self.hud.blit(gun_str, (right_x, 20))
 
         # Blit hud to screen
@@ -456,8 +456,6 @@ class Entity(pygame.sprite.Sprite):
             surface.blit(self.frame, target)
         else:
             surface.blit(pygame.transform.flip(self.frame, True, False), target)
-
-
 
     def move(self, **kwargs):
         return NotImplemented
@@ -715,6 +713,27 @@ class Projectile(Entity):
         self.rect.center = self.pos
 
 
+class MainMenu(thorpy.Application):
+    def __init__(self, size, game_func):
+        super().__init__(size, caption="Dino Hunter", flags=0)
+
+        self.start_button = thorpy.make_button("Start", func=game_func, params={'menufunc': self})
+        self.controls = thorpy.make_button("Controls")
+        self.high_score = thorpy.make_button("High Score")
+        self.quit_button = thorpy.make_button("Quit", func=thorpy.functions.quit_menu_func)
+        self.bg = thorpy.Background(image=thorpy.style.EXAMPLE_IMG, color=(200, 200, 200),
+                                    elements=[self.start_button, self.high_score, self.quit_button])
+
+        self.menu = thorpy.Menu(self.bg)
+        self.reaction = thorpy.Reaction(reacts_to=thorpy.constants.THORPY_EVENT + 1, reac_func=self.start)
+
+    def start(self):
+        thorpy.theme.set_theme('human')
+        thorpy.store(self.bg)
+        self.bg.add_reaction(self.reaction)
+        self.menu.play()
+
+
 # MAIN ##################
 def main():
     # MAIN CODE ######################################################
@@ -727,8 +746,10 @@ def main():
     # Instantiation ##################################################
     game = ControlManager(caption="Dino Hunter", screen_width=screen_width, screen_height=screen_height)
 
-    # GAME LOOP ######################################################
-    game.main_loop()
+    # Menu ###########################################################
+    main_menu = MainMenu(size=(screen_width, screen_height), game_func=game.main_loop)
+    main_menu.start()
+
     pygame.quit()
 
 
