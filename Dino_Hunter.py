@@ -15,6 +15,8 @@ import os
 import math
 import random
 import thorpy
+import json
+import cryptography
 from itertools import cycle
 from util import Utilities
 from util import FIFO
@@ -81,9 +83,7 @@ class ControlManager(object):
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.complex_camera, self.screen_width, self.screen_height)
-        self.dt = None
-        self.key_state = None
+        self.camera = Camera(Utilities.fixed_x_camera, self.screen_width, self.screen_height)
         self.run = True
 
         # HUD surface
@@ -126,7 +126,7 @@ class ControlManager(object):
                 self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
                 self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
 
-    def main_loop(self, menufunc):
+    def main_loop(self):
         """This loop represents all the actions that need to be taken during one cycle:
                 1. Update world based on what user did
                 2. Clear screen w/ win.fill(black)
@@ -141,20 +141,18 @@ class ControlManager(object):
                 # If user clicks red X, toggle run
                 if event.type == pygame.QUIT:
                     self.run = False
+                # Pause
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     paused = not paused
                     paused_txt = self.hud_font.render("-- PAUSED --", 1, (255, 0, 0))
-                    self.screen.blit(paused_txt, self.bg.mid_rect.center)
+                    self.screen.blit(paused_txt, self.screen_rect.center)
                     pygame.display.update()
 
             # Update key state
-            self.key_state = pygame.key.get_pressed()
-            horizontal_direction, vertical_direction, firing = self.parse_key_state()
+            key_state = pygame.key.get_pressed()
+            horizontal_direction, vertical_direction, firing = self.parse_key_state(key_state)
 
             if not paused:
-                # Update time delta
-                self.dt = self.clock.tick(self.fps)
-
                 # Mob spawn
                 while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
                     e = self.mob_queue.remove()
@@ -209,7 +207,10 @@ class ControlManager(object):
                 self.redraw_game_window()
 
         # Exit to main menu
-        menufunc.menu.blit_and_update()
+        hs_event = pygame.event.Event(pygame.USEREVENT + 4, {"score": self.score})
+        rs_event = pygame.event.Event(pygame.USEREVENT + 3, {"dummy": 0})
+        pygame.event.post(rs_event)
+        pygame.event.post(hs_event)
 
     def detect_collision(self):
         # Player-enemy collision detection:
@@ -262,10 +263,10 @@ class ControlManager(object):
                     self.bullets.remove(bullet)
                     self.world.remove(bullet)
 
-    def parse_key_state(self):
+    def parse_key_state(self, key_state):
         """Parses pressed keys"""
         # Quit
-        if self.key_state[pygame.K_ESCAPE]:
+        if key_state[pygame.K_ESCAPE]:
             self.run = False
 
         # Movement
@@ -274,23 +275,26 @@ class ControlManager(object):
         horizontal_direction = 0
 
         # Directional keys
-        if self.key_state[pygame.K_w] or self.key_state[pygame.K_s]:
-            vertical_direction = self.key_state[pygame.K_s] - self.key_state[pygame.K_w]
-        elif self.key_state[pygame.K_UP] or self.key_state[pygame.K_DOWN]:
-            vertical_direction = self.key_state[pygame.K_DOWN] - self.key_state[pygame.K_UP]
-        if self.key_state[pygame.K_a] or self.key_state[pygame.K_d]:
-            horizontal_direction = self.key_state[pygame.K_d] - self.key_state[pygame.K_a]
-        elif self.key_state[pygame.K_LEFT] or self.key_state[pygame.K_RIGHT]:
-            horizontal_direction = self.key_state[pygame.K_RIGHT] - self.key_state[pygame.K_LEFT]
+        if key_state[pygame.K_w] or key_state[pygame.K_s]:
+            vertical_direction = key_state[pygame.K_s] - key_state[pygame.K_w]
+        elif key_state[pygame.K_UP] or key_state[pygame.K_DOWN]:
+            vertical_direction = key_state[pygame.K_DOWN] - key_state[pygame.K_UP]
+        if key_state[pygame.K_a] or key_state[pygame.K_d]:
+            horizontal_direction = key_state[pygame.K_d] - key_state[pygame.K_a]
+        elif key_state[pygame.K_LEFT] or key_state[pygame.K_RIGHT]:
+            horizontal_direction = key_state[pygame.K_RIGHT] - key_state[pygame.K_LEFT]
 
         # Weapon-related
-        firing = self.key_state[pygame.K_SPACE]
+        firing = key_state[pygame.K_SPACE]
 
         return horizontal_direction, vertical_direction, firing
 
     def redraw_game_window(self):
         """redraw_game_window function will fill the window with the specific RGB value and then call on each
         object's .draw() method in order to populate it to the window. """
+
+        # Update time delta
+        dt = self.clock.tick(self.fps)
 
         # Clear screen
         self.screen.fill(ControlManager.BLACK)
@@ -317,7 +321,7 @@ class ControlManager(object):
 
         # Move select entities and draw everything to screen
         for entity in self.world:
-            entity.animate(self.dt)
+            entity.animate(dt)
 
             # Player has already moved (to update camera)
             if not isinstance(entity, Player):
@@ -490,8 +494,9 @@ class Player(Entity):
 
         # Animation #####################################################################
         # Load player sprite sheet
-        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", "MH-6J Masknell-flight.png"), rows=1,
-                                           columns=6)
+        self.sheet = Utilities.SpriteSheet(
+            filename=os.path.join(os.path.abspath("images"), "MH-6J Masknell-flight.png"),
+            rows=1, columns=6)
 
         self.timer = 0
         self.frame_duration = 33
@@ -565,17 +570,17 @@ class Player(Entity):
 
 
 class Enemy(Entity):
-    def __init__(self, spritesheet, rows, cols, duration):
+    def __init__(self, filename, rows, cols, duration):
         super().__init__(health=100, x=0, y=0, width=0, height=0, vel=random.uniform(0.5, 1.0))
         self.end = None
         self.path = None
-        self.initialize_animation(spritesheet, rows, cols, duration)
+        self.initialize_animation(filename, rows, cols, duration)
         self.layer = 1
 
     def initialize_animation(self, filename, rows, cols, duration):
         # Animation #####################################################################
         # Load sprite sheet
-        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", filename), rows=rows,
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join(os.path.abspath("images"), filename), rows=rows,
                                            columns=cols)
         self.facing = False
         self.timer = 0
@@ -676,7 +681,7 @@ class Projectile(Entity):
         self.rect = pygame.Rect(self.x - radius, self.y - radius, radius * 2, radius * 2)
         self.facing = facing
         self.dx = dx
-        self.sheet = Utilities.SpriteSheet(filename=os.path.join("images", 'bullets.png'), rows=1,
+        self.sheet = Utilities.SpriteSheet(filename=os.path.join(os.path.abspath("images"), 'bullets.png'), rows=1,
                                            columns=2)
         self.frames = self.sheet.get_images()
         for frame in self.frames:
@@ -717,22 +722,54 @@ class MainMenu(thorpy.Application):
     def __init__(self, size, game_func):
         super().__init__(size, caption="Dino Hunter", flags=0)
 
-        self.start_button = thorpy.make_button("Start", func=game_func, params={'menufunc': self})
+        self.start_button = thorpy.make_button("Start", func=game_func)
         self.controls = thorpy.make_button("Controls")
-        self.high_score = thorpy.make_button("High Score")
+        self.high_score = thorpy.make_button("High Score", func=self.display_highscore)
         self.quit_button = thorpy.make_button("Quit", func=thorpy.functions.quit_menu_func)
         self.bg = thorpy.Background(image=thorpy.style.EXAMPLE_IMG, color=(200, 200, 200),
                                     elements=[self.start_button, self.high_score, self.quit_button])
-
+        # Place holder
         self.menu = thorpy.Menu(self.bg)
-        self.reaction = thorpy.Reaction(reacts_to=thorpy.constants.THORPY_EVENT + 1, reac_func=self.start)
+
+        # React to custom Pygame events and allow us to communicate via a queue between the game and the menu
+        self.high_score_reaction = thorpy.Reaction(reacts_to=pygame.USEREVENT + 4, reac_func=Utilities.determine_highscore)
+        self.refresh_reaction = thorpy.Reaction(reacts_to=pygame.USEREVENT + 3, reac_func=self.refresh)
 
     def start(self):
+        """Creates and displays menu"""
         thorpy.theme.set_theme('human')
+        self.bg.add_reaction(self.high_score_reaction)
+        self.bg.add_reaction(self.refresh_reaction)
+
         thorpy.store(self.bg)
-        self.bg.add_reaction(self.reaction)
+        self.menu = thorpy.Menu(self.bg)
         self.menu.play()
 
+    def refresh(self, dummy):
+        """Redraws the menu over the Pygame screen"""
+        print(self.menu)
+        self.menu.blit_and_update()
+
+    def display_highscore(self):
+        title_element = thorpy.make_text("Hall of Fame", 22, (255, 255, 0))
+        title_element.set_font_size(50)
+        title_element.set_font('helvetica')
+        scores = Utilities.retrieve_highscore()
+
+        element = thorpy.Element("Element")
+        element.set_text(str(scores))
+        element.scale_to_title()
+        elements = [element]
+        # central_box = thorpy.Box(elements=elements)
+        # central_box.fit_children(margins=(30, 30))
+        # central_box.center()
+        # central_box.add_lift()
+        # central_box.set_main_color((220, 220, 220, 180))
+        background = thorpy.Background(image=thorpy.style.EXAMPLE_IMG,
+                                       elements=[title_element, element])
+        thorpy.store(background)
+        menu = thorpy.Menu(background)
+        menu.play()
 
 # MAIN ##################
 def main():
