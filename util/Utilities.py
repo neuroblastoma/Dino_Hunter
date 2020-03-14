@@ -80,18 +80,30 @@ def retrieve_highscore(filename="high_score.data"):
         except OSError:
             raise OSError("Unable to open {}".format(filename))
     else:
-        scores = {}
+        scores = {
+            "1": {
+                "name": "BJC",
+                "score": "644725"
+            }
+        }
 
+    # TODO: LINKED LIST THIS!!!!!
     return scores
 
 
 def determine_highscore(player_score, filename="high_score.data"):
-    print(player_score)
+    pscore = str(player_score).split(':')[1].split('}')[0]
     scores = retrieve_highscore(filename)
 
-    if scores:
-        print("Test: {}".format(scores))
-    else:
-        print("No high score")
+    set_score = False
+    position = 0
 
-    return NotImplemented
+    for item in scores.items():
+        if int(item[1]['score']) < int(pscore):
+            set_score = True
+            position = item[0]
+            break
+
+    print(position)
+
+    return

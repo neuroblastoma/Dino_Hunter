@@ -14,9 +14,7 @@ import pygame
 import os
 import math
 import random
-import thorpy
-import json
-import cryptography
+from Main_Menu import MainMenu
 from itertools import cycle
 from util import Utilities
 from util import FIFO
@@ -75,7 +73,6 @@ class ControlManager(object):
         pygame.display.set_caption(caption)
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         self.screen_rect = self.screen.get_rect()
-        self.viewport = self.screen.get_rect()
 
         # Background
         self.bg = Background(width=self.screen_width, height=screen_height)
@@ -717,59 +714,6 @@ class Projectile(Entity):
         self.pos -= self.v
         self.rect.center = self.pos
 
-
-class MainMenu(thorpy.Application):
-    def __init__(self, size, game_func):
-        super().__init__(size, caption="Dino Hunter", flags=0)
-
-        self.start_button = thorpy.make_button("Start", func=game_func)
-        self.controls = thorpy.make_button("Controls")
-        self.high_score = thorpy.make_button("High Score", func=self.display_highscore)
-        self.quit_button = thorpy.make_button("Quit", func=thorpy.functions.quit_menu_func)
-        self.bg = thorpy.Background(image=thorpy.style.EXAMPLE_IMG, color=(200, 200, 200),
-                                    elements=[self.start_button, self.high_score, self.quit_button])
-        # Place holder
-        self.menu = thorpy.Menu(self.bg)
-
-        # React to custom Pygame events and allow us to communicate via a queue between the game and the menu
-        self.high_score_reaction = thorpy.Reaction(reacts_to=pygame.USEREVENT + 4, reac_func=Utilities.determine_highscore)
-        self.refresh_reaction = thorpy.Reaction(reacts_to=pygame.USEREVENT + 3, reac_func=self.refresh)
-
-    def start(self):
-        """Creates and displays menu"""
-        thorpy.theme.set_theme('human')
-        self.bg.add_reaction(self.high_score_reaction)
-        self.bg.add_reaction(self.refresh_reaction)
-
-        thorpy.store(self.bg)
-        self.menu = thorpy.Menu(self.bg)
-        self.menu.play()
-
-    def refresh(self, dummy):
-        """Redraws the menu over the Pygame screen"""
-        print(self.menu)
-        self.menu.blit_and_update()
-
-    def display_highscore(self):
-        title_element = thorpy.make_text("Hall of Fame", 22, (255, 255, 0))
-        title_element.set_font_size(50)
-        title_element.set_font('helvetica')
-        scores = Utilities.retrieve_highscore()
-
-        element = thorpy.Element("Element")
-        element.set_text(str(scores))
-        element.scale_to_title()
-        elements = [element]
-        # central_box = thorpy.Box(elements=elements)
-        # central_box.fit_children(margins=(30, 30))
-        # central_box.center()
-        # central_box.add_lift()
-        # central_box.set_main_color((220, 220, 220, 180))
-        background = thorpy.Background(image=thorpy.style.EXAMPLE_IMG,
-                                       elements=[title_element, element])
-        thorpy.store(background)
-        menu = thorpy.Menu(background)
-        menu.play()
 
 # MAIN ##################
 def main():
