@@ -10,7 +10,6 @@ class MainMenu(thorpy.Application):
 
         self.title_image = thorpy.Image(path=os.path.join("images", "dino_hunter.png"), colorkey=(0, 0, 0))
         self.start_button = thorpy.make_button("Start", func=game_func)
-        #self.controls = thorpy.make_button("Controls")
         self.high_score = thorpy.make_button("High Score", func=self.display_high_score)
         self.quit_button = thorpy.make_button("Quit", func=thorpy.functions.quit_menu_func)
         self.bg = thorpy.Background(image=os.path.join("images", "retro_forest.jpg"), color=(200, 200, 200),
@@ -20,8 +19,10 @@ class MainMenu(thorpy.Application):
 
         # React to custom Pygame events and allow us to communicate via a queue between the game and the menu
         self.high_score_reaction = thorpy.Reaction(reacts_to=pygame.USEREVENT + 4,
-                                                   reac_func=Utilities.determine_highscore)
+                                                   reac_func=Utilities.determine_highscore, params={"set_function": self.set_high_score})
         self.refresh_reaction = thorpy.Reaction(reacts_to=pygame.USEREVENT + 3, reac_func=self.refresh)
+
+        self.set_score_reaction = thorpy.Reaction(reacts_to=pygame.USEREVENT + 2, reac_func=self.set_high_score)
 
     def start(self):
         """Creates and displays menu"""
@@ -42,6 +43,26 @@ class MainMenu(thorpy.Application):
         thorpy.functions.quit_menu_func()
         self.menu.blit_and_update()
 
+    def set_high_score(self, scores, player_score, position):
+        name = thorpy.Inserter.make("Enter initials", value="ABC")
+        box = thorpy.make_ok_box([name])
+        thorpy.auto_ok(box)
+        box.center()
+        thorpy.launch_blocking(box)
+        pname = name.get_value()
+
+        # Return
+        return_button = thorpy.make_button(text="Return", func=self.return_main_menu)
+        return_button.set_center((50, 30))
+
+        title_element = thorpy.make_text("Save score?", 22, (255, 255, 0))
+        enter_button = thorpy.make_button(text="Save", func=Utilities.set_highscore, params={"scores": scores, "player_score": player_score, "position": position, "name": pname})
+        background = thorpy.Background(image=os.path.join("images", "retro_forest.jpg"),
+                                       elements=[title_element, enter_button])
+        thorpy.store(background)
+        set_menu = thorpy.Menu([background, return_button])
+        set_menu.play()
+
     def display_high_score(self):
         # Title
         title_element = thorpy.make_text("Hall of Fame", 22, (255, 255, 0))
@@ -54,7 +75,7 @@ class MainMenu(thorpy.Application):
         for item in scores.items():
             display_txt = display_txt + "{}  {}    {}\n".format(item[0], item[1]['name'], item[1]['score'])
 
-        hs_element = thorpy.make_text(text=display_txt, font_size=30, font_color=(255, 255, 255))
+        hs_element = thorpy.make_text(text=display_txt, font_size=30, font_color=(0, 0, 0))
         hs_element.set_font('helvetica')
 
         # Return

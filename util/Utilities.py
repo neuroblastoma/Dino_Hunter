@@ -1,4 +1,5 @@
 import pygame
+import Main_Menu
 import math
 import json
 import os
@@ -91,7 +92,7 @@ def retrieve_highscore(filename="high_score.data"):
     return scores
 
 
-def determine_highscore(player_score, filename="high_score.data"):
+def determine_highscore(player_score, set_function, filename="high_score.data"):
     pscore = str(player_score).split(':')[1].split('}')[0]
     scores = retrieve_highscore(filename)
 
@@ -106,6 +107,25 @@ def determine_highscore(player_score, filename="high_score.data"):
 
     # Set score
     if set_score:
-        pass
+        set_function(scores, player_score, position)
 
     return
+
+
+def set_highscore(scores, player_score, position, name):
+    name, position, scores, player_score
+    abs_filename = os.path.join(os.path.abspath("util"), "high_score.data")
+    pscore = str(player_score).split(':')[1].split('}')[0]
+
+
+    for score in scores.items():
+        if score[0] == str(position):
+            score[1].update({'name': str(name), 'score': str(pscore)})
+
+    print(type(scores))
+
+    try:
+        with open(abs_filename, 'w') as f:
+            json.dump(scores, f)
+    except OSError:
+        raise OSError("Unable to open {}".format(abs_filename))
