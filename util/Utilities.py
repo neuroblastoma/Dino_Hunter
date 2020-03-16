@@ -104,6 +104,8 @@ def determine_highscore(player_score, filename="high_score.data"):
             position = item[0]
             break
 
-    print(position)
+    # Set score
+    if set_score:
+        pass
 
     return

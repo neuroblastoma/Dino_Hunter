@@ -110,6 +110,26 @@ class ControlManager(object):
         # Score
         self.score = 0
 
+    def reset(self):
+        self.run = True
+        self.current_level = -1
+        self.score = 0
+
+        # Remove any residual sprites
+        while not self.mob_queue.empty:
+            self.mob_queue.remove()
+        self.players.empty()
+        self.world.empty()
+        self.enemies.empty()
+
+        # Re-init player and enemies
+        self.player = Player(x=self.screen_width / 2)
+        self.create_enemies()
+
+        # Repopulate trackers
+        self.players.add(self.player)
+        self.world.add(self.player, layer=self.player.layer)
+
     def create_enemies(self):
         base = (2, 4, 3)
         self.current_level += 1
@@ -131,6 +151,9 @@ class ControlManager(object):
                 4. Call pygame.display.update to update graphics on screen.
         """
         paused = False
+        # Need to set for subsequent runs from main menu
+        if not self.run:
+            self.reset()
 
         while self.run:
             # Check events
