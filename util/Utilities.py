@@ -1,5 +1,7 @@
 import pygame
 import math
+import json
+import os
 
 
 class SpriteSheet(object):
@@ -50,7 +52,7 @@ class SpriteSheet(object):
         return retSurfaces
 
 
-def complex_camera(camera_rect, entity, screenWidth, screenHeight):
+def fixed_x_camera(camera_rect, entity, screenWidth, screenHeight):
     """Tracks the position of the given entity and locks screen to their x position"""
 
     # Create x,y based on entity's position
@@ -65,3 +67,45 @@ def complex_camera(camera_rect, entity, screenWidth, screenHeight):
 
 def determine_layer(height):
     return lambda x: math.floor((height + x) / 10)
+
+
+def retrieve_highscore(filename="high_score.data"):
+    abs_filename = os.path.join(os.path.abspath("util"), filename)
+
+    if os.path.exists(abs_filename):
+        # Read filename
+        try:
+            with open(abs_filename, 'rb') as f:
+                scores = json.load(f)
+        except OSError:
+            raise OSError("Unable to open {}".format(filename))
+    else:
+        scores = {
+            "1": {
+                "name": "BJC",
+                "score": "644725"
+            }
+        }
+
+    # TODO: LINKED LIST THIS!!!!!
+    return scores
+
+
+def determine_highscore(player_score, filename="high_score.data"):
+    pscore = str(player_score).split(':')[1].split('}')[0]
+    scores = retrieve_highscore(filename)
+
+    set_score = False
+    position = 0
+
+    for item in scores.items():
+        if int(item[1]['score']) < int(pscore):
+            set_score = True
+            position = item[0]
+            break
+
+    # Set score
+    if set_score:
+        pass
+
+    return
