@@ -1,9 +1,9 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='Dino_Hunter',
     version='1.0.0',
-    packages=find_packages(),
+    packages=['thorpy', 'pygame'],
     url='https://github.com/neuroblastoma/Dino_Hunter',
     license='',
     author='',
