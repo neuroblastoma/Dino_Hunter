@@ -11,8 +11,8 @@ pygame.display.set_caption("Test Game Concepts")
 
 class player(object):
     ''' Player class. Defaulting attributes:
-    x = 50
-    y = 50
+    _x = 50
+    _y = 50
     width = 25
     height = 25
     vel = 2
@@ -34,7 +34,7 @@ class groundDino(object):
     width1 = 30
     height1 = 30
     x1 = 5
-    y1 = screen_height - height1
+    y1 = _screen_height - height1
     vel1 = 0.5
     x1Mod = 1 '''
 
@@ -55,7 +55,7 @@ class groundDino(object):
     # width2 = 15
     # height2 = 15
     # x2 = 500
-    # y2 = screen_height - height2
+    # y2 = _screen_height - height2
     # vel2 = 5
     # x2Mod = 1
 
@@ -66,7 +66,7 @@ class airDino(object):
     airWidth = 15
     airHeight = 15
     airX = 50
-    airY = screen_height - 50
+    airY = _screen_height - 50
     airVel = 5
     airXMod = 1
     airYMod = -1 '''
@@ -189,9 +189,9 @@ while run:
         
     if keys[pygame.K_SPACE]: 
         
-        #xGun = x
-        #yGun = y + (height / 2)
-        #pygame.draw.rect(win,(0,0,0),(xGun,yGun,screen_width,2))
+        #xGun = _x
+        #yGun = _y + (height / 2)
+        #pygame.draw.rect(win,(0,0,0),(xGun,yGun,_screen_width,2))
         #pygame.display.update()
         
         if len(bullets) < 2:                                                                                     #radius, color(black)               

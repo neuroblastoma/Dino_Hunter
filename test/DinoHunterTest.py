@@ -1,7 +1,4 @@
 import unittest
-# import TestFIFO
-# import TestStack
-# import TestUtilities
 import TestEntities
 
 def suite():
@@ -12,6 +9,9 @@ def suite():
     test_suite.addTest(unittest.makeSuite(TestEntities.TestEntity))
     test_suite.addTest(unittest.makeSuite(TestEntities.TestEnemy))
     test_suite.addTest(unittest.makeSuite(TestEntities.TestTRex))
+    test_suite.addTest(unittest.makeSuite(TestEntities.TestRaptor))
+    test_suite.addTest(unittest.makeSuite(TestEntities.TestPtero))
+    test_suite.addTest(unittest.makeSuite(TestEntities.TestPlayer))
     return test_suite
 
 

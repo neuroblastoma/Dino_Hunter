@@ -1,8 +1,8 @@
 import pygame
 import math
-from util import LinkedList
 import json
 import os
+from util import LinkedList
 
 
 class SpriteSheet(object):
@@ -54,9 +54,9 @@ class SpriteSheet(object):
 
 
 def fixed_x_camera(camera_rect, entity, screen_width):
-    """Tracks the position of the given entity and locks screen to their x position"""
+    """Tracks the position of the given entity and locks screen to their _x position"""
 
-    # Create x,y based on entity's position
+    # Create _x,_y based on entity's position
     x = -entity.rect.center[0] + screen_width / 2
     y = entity.rect.y
 
@@ -123,7 +123,8 @@ def determine_highscore(player_score, set_function, filename="high_score.data"):
 def set_highscore(score_list, player_score, position, name):
     abs_filename = os.path.join(os.path.abspath("util"), "high_score.data")
 
-    score_list.insertAtIndex(position - 1, (str(position), {'name': str(name), 'score': str(player_score.strip(' ').zfill(6))}))
+    score_list.insertAtIndex(position - 1,
+                             (str(position), {'name': str(name), 'score': str(player_score.strip(' ').zfill(6))}))
 
     # Only write top eight entries
     scores = {}
@@ -137,3 +138,23 @@ def set_highscore(score_list, player_score, position, name):
             json.dump(scores, f)
     except OSError:
         raise OSError("Unable to open {}".format(abs_filename))
+
+
+def checkNumeric(value):
+    if not isinstance(value, int) and not isinstance(value, float):
+        raise RuntimeError(value + ' is not a number')
+    return value
+
+
+def checkDimensions(value):
+    value = checkNumeric(value)
+    if value <= 200:
+        raise RuntimeError(str(value) + ' is not within minimum range')
+    return value
+
+
+def checkPositive(value):
+    value = checkNumeric(value)
+    if value <= 0:
+        raise RuntimeError(str(value) + ' is not a positive number')
+    return value

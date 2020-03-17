@@ -10,20 +10,26 @@
 # Steven Gore
 # John Lytle
 
-import pygame
 import os
 import math
 import random
-from Main_Menu import MainMenu
+import pygame
+import sys
+
+try:
+    import Utilities
+except ImportError:
+    from util import Utilities
+
 from itertools import cycle
-from util import Utilities
 from util import FIFO
 from util import Stack
+from Main_Menu import *
 
 
 # CLASSES ##################
 class Camera(object):
-    """Creates a viewport on a fixed x-axis"""
+    """Creates a viewport on a fixed _x-axis"""
 
     def __init__(self, cameraFunc, width, height):
         self.width = width
@@ -33,11 +39,11 @@ class Camera(object):
 
     def apply(self, target):
         """Apply camera offset to target"""
-        # Bind x coordinate
+        # Bind _x coordinate
         dx = target.rect.x + self.offsetState.x
         dx = dx % self.width
 
-        # Bind y coordinate
+        # Bind _y coordinate
         if 101 <= target.y <= self.height - target.rect.height:
             target.y = target.y
         elif target.y > self.height - target.rect.height:
@@ -63,28 +69,28 @@ class ControlManager(object):
     def __init__(self, caption, screen_width=1500, screen_height=750):
         """Initialize the display and prepare game objects"""
         # Screen settings
-        self.screen_width = screen_width
-        self.screen_height = screen_height
+        self._screen_width = screen_width
+        self._screen_height = screen_height
         self.fps = ControlManager.FPS
         self.current_level = -1
 
         # Screen attributes
         pygame.display.set_caption(caption)
-        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        self.screen = pygame.display.set_mode((self._screen_width, self._screen_height))
         self.screen_rect = self.screen.get_rect()
 
         # Background
-        self.bg = Background(width=self.screen_width, height=screen_height)
-        self.determine_layer = Utilities.determine_layer(self.screen_height)
+        self.bg = Background(width=self._screen_width, height=screen_height)
+        self.determine_layer = Utilities.determine_layer(self._screen_height)
 
         # Core settings
         self.clock = pygame.time.Clock()
-        self.camera = Camera(Utilities.fixed_x_camera, self.screen_width, self.screen_height)
+        self.camera = Camera(Utilities.fixed_x_camera, self._screen_width, self._screen_height)
         self.run = True
 
         # HUD surface
-        self.hud = pygame.Surface((self.screen_width, 100))
-        self.hud_font = pygame.font.Font(os.path.join("util", "PressStart2P-Regular.ttf"), 15)
+        self.hud = pygame.Surface((self._screen_width, 100))
+        self.hud_font = pygame.font.Font(os.path.join(os.path.abspath("images"), "PressStart2P-Regular.ttf"), 15)
 
         self.mob_limit = 10
         self.mob_queue = FIFO.FIFO()
@@ -99,7 +105,7 @@ class ControlManager(object):
         self.tracker = Stack.Stack()
 
         # Sprite initialization
-        self.player = Player(x=self.screen_width / 2)
+        self.player = Player(x=self._screen_width / 2)
         self.create_enemies()
 
         # Add sprites to "global" tracker
@@ -108,6 +114,22 @@ class ControlManager(object):
 
         # Score
         self.score = 0
+
+    @property
+    def screen_width(self):
+        return self._screen_width
+
+    @screen_width.setter
+    def screen_width(self, width):
+        return Utilities.checkDimensions(width)
+
+    @property
+    def screen_height(self):
+        return self._screen_height
+
+    @screen_width.setter
+    def screen_height(self, height):
+        return Utilities.checkDimensions(height)
 
     def reset(self):
         self.run = True
@@ -122,7 +144,7 @@ class ControlManager(object):
         self.enemies.empty()
 
         # Re-init player and enemies
-        self.player = Player(x=self.screen_width / 2)
+        self.player = Player(x=self._screen_width / 2)
         self.create_enemies()
 
         # Repopulate trackers
@@ -133,14 +155,14 @@ class ControlManager(object):
         base = (2, 4, 3)
         self.current_level += 1
         if self.current_level == 0:
-            self.mob_queue.add(TRex(self.screen_width, self.screen_height))
-            self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
-            self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
+            self.mob_queue.add(TRex(self._screen_width, self._screen_height))
+            self.mob_queue.add(Raptor(self._screen_width, self._screen_height))
+            self.mob_queue.add(Ptero(self._screen_width, self._screen_height))
         else:
             for i in range(base[0] * self.current_level):
-                self.mob_queue.add(TRex(self.screen_width, self.screen_height))
-                self.mob_queue.add(Raptor(self.screen_width, self.screen_height))
-                self.mob_queue.add(Ptero(self.screen_width, self.screen_height))
+                self.mob_queue.add(TRex(self._screen_width, self._screen_height))
+                self.mob_queue.add(Raptor(self._screen_width, self._screen_height))
+                self.mob_queue.add(Ptero(self._screen_width, self._screen_height))
 
     def main_loop(self):
         """This loop represents all the actions that need to be taken during one cycle:
@@ -175,7 +197,7 @@ class ControlManager(object):
                 # Mob spawn
                 while len(self.enemies) <= self.mob_limit and not self.mob_queue.empty():
                     e = self.mob_queue.remove()
-                    # Adjust layer depending on y value
+                    # Adjust layer depending on _y value
                     e.layer = self.determine_layer(e.y + e.height)
                     self.enemies.add(e)
                     self.world.add(e, layer=e.layer)
@@ -189,8 +211,8 @@ class ControlManager(object):
                 self.player.firing = firing
                 self.player.move()
 
-                # Clamp player's x coordinate:
-                self.player.x = self.player.x % self.screen_width
+                # Clamp player's _x coordinate:
+                self.player.x = self.player.x % self._screen_width
 
                 # Update camera
                 self.camera.update(self.player)
@@ -204,14 +226,14 @@ class ControlManager(object):
                         level_txt = font.render("LEVEL COMPLETE! " + str(counter // 10), 1, (0, 255, 0))
                         self.screen.blit(level_txt, (375, 300))
                         counter -= 1
-                        self.player.rect.y = self.screen_height / 2
-                        self.player.rect.x = self.screen_width / 2
+                        self.player.rect.y = self._screen_height / 2
+                        self.player.rect.x = self._screen_width / 2
                         pygame.display.update()
                         self.redraw_game_window()
 
                     # Reset player position
-                    self.player.rect.y = self.screen_height / 2
-                    self.player.rect.x = self.screen_width / 2
+                    self.player.rect.y = self._screen_height / 2
+                    self.player.rect.x = self._screen_width / 2
 
                     # Increase gun strength
                     self.player.gun_str += 1
@@ -238,8 +260,8 @@ class ControlManager(object):
             self.player.damaged += 1
             if self.player.health <= self.player.damaged:
                 self.player.lives -= 1
-                self.player.x = 100
-                self.player.y = 100
+                self.player._x = 100
+                self.player._y = 100
                 self.player.gun_str = 1
                 self.player.damaged = 0
 
@@ -275,7 +297,7 @@ class ControlManager(object):
                     self.bullets.remove(bullet)
                     self.world.remove(bullet)
 
-                if bullet.rect.x > self.screen_width or bullet.rect.x < 0:
+                if bullet.rect.x > self._screen_width or bullet.rect.x < 0:
                     self.bullets.remove(bullet)
                     self.world.remove(bullet)
 
@@ -324,7 +346,7 @@ class ControlManager(object):
             # Number of supported bullets on screen
             if len(self.bullets) < 5 + self.current_level:
                 # Create a bullet instance
-                bullet = Projectile(round(self.screen_width // 2),
+                bullet = Projectile(round(self._screen_width // 2),
                                     round(self.player.rect.center[1] + self.player.height // 4), 2,
                                     color=(255, 255, 255), facing=self.player.facing,
                                     velocity=int(3), dx=self.player.angle)
@@ -369,7 +391,7 @@ class ControlManager(object):
         pygame.draw.rect(self.hud, ControlManager.WHITE, rect, 3)
 
         # Left screen: lives, health bar
-        left_x = self.screen_width // 32
+        left_x = self._screen_width // 32
         #   Draw Player Health
         # Custom Health bar at top left
         pygame.draw.rect(self.hud, (255, 0, 0), (left_x, 15, self.player.health, 20))
@@ -389,20 +411,20 @@ class ControlManager(object):
             offset += 35
 
         # Middle screen: Enemy tracker
-        pygame.draw.rect(self.hud, ControlManager.WHITE, (rect.x + self.screen_width // 4, rect.y, 2 * rect.width // 4,
+        pygame.draw.rect(self.hud, ControlManager.WHITE, (rect.x + self._screen_width // 4, rect.y, 2 * rect.width // 4,
                                                           rect.height), 3)
         while not self.tracker.empty():
             e = self.tracker.pop()
             x, y = e.rect.topleft
 
-            new_x = (x * (2 * rect.width // 4) // self.screen_width) + self.screen_width // 4
-            new_y = (y * 100) / self.screen_height
+            new_x = (x * (2 * rect.width // 4) // self._screen_width) + self._screen_width // 4
+            new_y = (y * 100) / self._screen_height
             t = pygame.rect.Rect(new_x, new_y - 10, 10, 10)
             pygame.draw.rect(self.hud, e.rgb, t)
 
         # Right screen: score, gun strength, level
         #   Draw Player scoreboard
-        right_x = (3 * self.screen_width // 4) + self.screen_width // 16
+        right_x = (3 * self._screen_width // 4) + self._screen_width // 16
         text = self.hud_font.render("Score: " + str(self.score).zfill(6), 1, ControlManager.WHITE)
         self.hud.blit(text, (right_x, 60))
         #   Level
@@ -420,7 +442,7 @@ class Background(object):
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.mid_bg = pygame.image.load(os.path.join("images", "retro_forest.jpg"))
+        self.mid_bg = pygame.image.load(os.path.join(os.path.abspath("images"), "retro_forest.jpg"))
         self.mid_bg = pygame.transform.scale(self.mid_bg, (self.width, self.height))
         self.mid_rect = self.mid_bg.get_rect()
 
@@ -430,7 +452,7 @@ class Background(object):
         surface.blit(self.mid_bg, self.mid_rect.move(-self.mid_rect.width, 0))
 
     def move(self, offset):
-        # Bind x coordinate between 0 and screen_width
+        # Bind _x coordinate between 0 and _screen_width
         if self.mid_rect.left >= self.width:
             self.mid_rect.x = 0
         elif self.mid_rect.right <= 0:
@@ -568,7 +590,7 @@ class Player(Entity):
             else:
                 self.lift_speed = self.max_lift
 
-        # Adjust (x,y)
+        # Adjust (_x,_y)
         self.x += (self.hdir * self.vel)
         self.y += (self.vdir * self.lift_speed)
 
@@ -597,6 +619,7 @@ class Enemy(Entity):
         # Load sprite sheet
         self.sheet = Utilities.SpriteSheet(filename=os.path.join(os.path.abspath("images"), filename), rows=rows,
                                            columns=cols)
+
         self.facing = False
         self.timer = 0
         self.frame_duration = duration
@@ -675,11 +698,11 @@ class Ptero(Enemy):
 
         self.rgb = (255, 255, 0)
 
-        # x-values
+        # _x-values
         self.end = screen_width - (self.width * random.randrange(2, 4))
         self.path = [0 + (self.width * random.randrange(2, 4)), self.end]
 
-        # y-values
+        # _y-values
         self.y_vel = random.uniform(-2, 2)
         self.y_end = screen_height - (self.height * random.randrange(2, 4))
         self.y_path = [0 + (self.height * random.randrange(2, 4)), self.y_end]

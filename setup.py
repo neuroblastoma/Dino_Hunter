@@ -3,7 +3,6 @@ from setuptools import setup
 setup(
     name='Dino_Hunter',
     version='1.0.0',
-    packages=['thorpy', 'pygame'],
     url='https://github.com/neuroblastoma/Dino_Hunter',
     license='',
     author='',
@@ -13,5 +12,10 @@ setup(
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3'
     ],
+    install_requires=[
+        'pygame>=1.9.6',
+        'thorpy>=1.6.3',
+        'mock'
+    ],
+    packages=['tests', 'utils']
 )
-
