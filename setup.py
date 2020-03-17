@@ -17,5 +17,5 @@ setup(
         'thorpy>=1.6.3',
         'mock'
     ],
-    packages=['tests', 'utils']
+    packages=['test', 'util']
 )
