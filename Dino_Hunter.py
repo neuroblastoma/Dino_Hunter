@@ -251,9 +251,9 @@ class ControlManager(object):
                 while counter > 0:
                     font = pygame.font.SysFont('comicsans', 100, True)
                     go_txt = font.render("GAME OVER!", 1, (0, 255, 0))
-                    self.screen.blit(go_txt, (375, 300))
-                    score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
-                    self.screen.blit(score_txt, (375, 400))
+                    self.screen.blit(go_txt, (550, 300))
+                    # score_txt = font.render("SCORE = " + str(self.player.score), 1, (0, 255, 0))
+                    # self.screen.blit(score_txt, (375, 400))
                     counter -= 1
                     pygame.display.update()
                     self.redraw_game_window()
