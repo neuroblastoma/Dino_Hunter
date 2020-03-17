@@ -28,7 +28,6 @@ class Camera(object):
     def __init__(self, cameraFunc, width, height):
         self.width = width
         self.height = height
-        # TODO: Link with player start location
         self.offsetState = pygame.Rect(self.width / 2, 1000, self.width, self.height)
         self.cameraFunc = cameraFunc
 
@@ -52,7 +51,7 @@ class Camera(object):
 
     def update(self, target):
         """Updates the camera coordinates to match targets. Centers screen on target"""
-        self.offsetState = self.cameraFunc(self.offsetState, target, self.width, self.height)
+        self.offsetState = self.cameraFunc(self.offsetState, target, self.width)
 
 
 class ControlManager(object):
@@ -222,8 +221,6 @@ class ControlManager(object):
                     for e in self.enemies:
                         self.world.add(e)
 
-                # TODO: Insert music here
-
                 self.redraw_game_window()
 
         # Exit to main menu
@@ -239,7 +236,7 @@ class ControlManager(object):
         if pe_collision:
             pe_collision[0].damaged += 1
             self.player.damaged += 1
-            if self.player.health <= self.player.damaged:  # TODO: Explosion or flashing or something? Respawn?
+            if self.player.health <= self.player.damaged:
                 self.player.lives -= 1
                 self.player.x = 100
                 self.player.y = 100
@@ -249,7 +246,6 @@ class ControlManager(object):
             if pe_collision[0].health <= pe_collision[0].damaged:
                 pe_collision[0].kill()
 
-            # TODO: Game over screen?
             if self.player.lives <= 0:
                 counter = 500
                 while counter > 0:
@@ -493,7 +489,6 @@ class Player(Entity):
 
         self.gun_str = 1
 
-        # TODO: Sounds
         self.lives = 3
         self.score = 0
         self.vdir = 0
