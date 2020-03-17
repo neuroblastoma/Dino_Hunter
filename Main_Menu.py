@@ -43,25 +43,19 @@ class MainMenu(thorpy.Application):
         thorpy.functions.quit_menu_func()
         self.menu.blit_and_update()
 
-    def set_high_score(self, scores, player_score, position):
-        name = thorpy.Inserter.make("Enter initials", value="ABC")
+    def set_high_score(self, score_list, player_score, position):
+        name = thorpy.Inserter.make("Congratulations! Enter initials for the Hall of Fame:", value="AAA")
         box = thorpy.make_ok_box([name])
         thorpy.auto_ok(box)
         box.center()
         thorpy.launch_blocking(box)
         pname = name.get_value()
 
-        # Return
-        return_button = thorpy.make_button(text="Return", func=self.return_main_menu)
-        return_button.set_center((50, 30))
+        # Set high score
+        Utilities.set_highscore(score_list, player_score, position, pname)
 
-        title_element = thorpy.make_text("Save score?", 22, (255, 255, 0))
-        enter_button = thorpy.make_button(text="Save", func=Utilities.set_highscore, params={"scores": scores, "player_score": player_score, "position": position, "name": pname})
-        background = thorpy.Background(image=os.path.join("images", "retro_forest.jpg"),
-                                       elements=[title_element, enter_button])
-        thorpy.store(background)
-        set_menu = thorpy.Menu([background, return_button])
-        set_menu.play()
+        # Restart main menu
+        self.menu.blit_and_update()
 
     def display_high_score(self):
         # Title

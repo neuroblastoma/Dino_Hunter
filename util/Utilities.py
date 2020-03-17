@@ -1,6 +1,6 @@
 import pygame
-import Main_Menu
 import math
+from util import LinkedList
 import json
 import os
 
@@ -53,11 +53,11 @@ class SpriteSheet(object):
         return retSurfaces
 
 
-def fixed_x_camera(camera_rect, entity, screenWidth, screenHeight):
+def fixed_x_camera(camera_rect, entity, screen_width):
     """Tracks the position of the given entity and locks screen to their x position"""
 
     # Create x,y based on entity's position
-    x = -entity.rect.center[0] + screenWidth / 2
+    x = -entity.rect.center[0] + screen_width / 2
     y = entity.rect.y
 
     # Move the camera
@@ -88,7 +88,6 @@ def retrieve_highscore(filename="high_score.data"):
             }
         }
 
-    # TODO: LINKED LIST THIS!!!!!
     return scores
 
 
@@ -96,33 +95,42 @@ def determine_highscore(player_score, set_function, filename="high_score.data"):
     pscore = str(player_score).split(':')[1].split('}')[0]
     scores = retrieve_highscore(filename)
 
+    score_list = LinkedList.LinkedList()
     set_score = False
     position = 0
 
+    # Read dict into LL
     for item in scores.items():
+        score_list.append(dataItem=item)
+
+    i = 0
+    while score_list.read(i):
+        item = score_list.read(i)
         if int(item[1]['score']) < int(pscore):
             set_score = True
-            position = item[0]
+            # One based index
+            position = int(item[0])
             break
+        i += 1
 
     # Set score
     if set_score:
-        set_function(scores, player_score, position)
+        set_function(score_list, pscore, position)
 
     return
 
 
-def set_highscore(scores, player_score, position, name):
-    name, position, scores, player_score
+def set_highscore(score_list, player_score, position, name):
     abs_filename = os.path.join(os.path.abspath("util"), "high_score.data")
-    pscore = str(player_score).split(':')[1].split('}')[0]
 
+    score_list.insertAtIndex(position - 1, (str(position), {'name': str(name), 'score': str(player_score.strip(' ').zfill(6))}))
 
-    for score in scores.items():
-        if score[0] == str(position):
-            score[1].update({'name': str(name), 'score': str(pscore)})
-
-    print(type(scores))
+    # Only write top eight entries
+    scores = {}
+    i = 0
+    while score_list.read(i) and i < 7:
+        scores[str(i + 1)] = score_list.read(i)[1]
+        i += 1
 
     try:
         with open(abs_filename, 'w') as f:
